@@ -77,16 +77,20 @@ class GPRegression:
             )
 
         return self
-
-    def predict(self, x):
-        # import ipdb; ipdb.set_trace()
-        return tfd.GaussianProcessRegressionModel(
+    
+    def gprm(self):
+        return lambda inputs: tfd.GaussianProcessRegressionModel(
             kernel=self.gp.kernel,
-            index_points=x,
+            index_points=inputs,
             observation_index_points=self.X,
             observations=self.Y,
             observation_noise_variance=self.gp.observation_noise_variance
-        ).sample()
+        )
+
+    def predict(self, x):
+        gprm_fit = self.gprm()(x[...,None])
+        # import ipdb; ipdb.set_trace()
+        return gprm_fit.mean().numpy().reshape(-1), gprm_fit.variance().numpy().reshape(-1)
 
 # if __name__ == "__main__":
 #     import tensorflow as tf

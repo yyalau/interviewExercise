@@ -101,8 +101,11 @@ class SEMHat:
         samp = []
         for pa_node in edge_key:
             assert pa_node.t == t, "Time mismatch for prior/nodes and samples."
-            samp += [samples[pa_node.name][pa_node.t, :].reshape(n_samples, -1)]
-
+            try:
+                samp += [samples[pa_node.name][pa_node.t, :].reshape(n_samples, -1)]
+            except:
+                import ipdb; ipdb.set_trace()
+        # 10, 3
         return np.hstack(samp)
 
     def get_kernel(
@@ -111,14 +114,14 @@ class SEMHat:
         #  Assigns the KDE for the marginal
         return lambda t, margin_id, n_samples: self.gp_emit.f[margin_id][t, 0].sample(
             n_samples
-        )
+        ).reshape(-1)
 
     def get_gp_emit(self, moment: int) -> Callable:
         #  Within time-slice emission only
         
         def __get_gp_emit(t, _, emit_keys, sample, n_samples):
-            samples = self.select_sample(sample, emit_keys, t, n_samples)[...,None]
-            return self.gp_emit.f[tnode2var(emit_keys)][t, 0].predict(samples).numpy()[moment]
+            samples = self.select_sample(sample, emit_keys, t, n_samples)
+            return self.gp_emit.f[tnode2var(emit_keys)][t, 0].predict(samples)[moment]
         
         return __get_gp_emit
 
@@ -126,8 +129,8 @@ class SEMHat:
         #  Only transition between time-slices (only valid for first-order Markov assumption)
         
         def __get_gp_trans(t, trans_keys, _, sample, n_samples):
-            samples= self.select_sample(sample, trans_keys, t - 1, n_samples)[..., None]
-            return self.gp_trans.f[tnode2var(trans_keys)][t - 1, 0].predict(samples).numpy()[moment]
+            samples= self.select_sample(sample, trans_keys, t - 1, n_samples)
+            return self.gp_trans.f[tnode2var(trans_keys)][t - 1, 0].predict(samples)[moment]
 
         return __get_gp_trans
 

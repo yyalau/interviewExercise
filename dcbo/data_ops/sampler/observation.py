@@ -14,7 +14,7 @@ class DSamplerObs(DataSamplerBase):
         initial_values: Optional[dict[str, Union[int, float]]] = None,
         interv_levels: Optional[dict[str, Union[np.array]]] = None,
         epsilon: Optional[dict[str, Union[np.array]]] = None,
-        n_samples=5,
+        n_samples=1,
     ):
         # assert not (initial_values is not None and interv_levels is not None), "Cannot have both initial values and interv_levels"
 

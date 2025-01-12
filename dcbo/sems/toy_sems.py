@@ -121,7 +121,7 @@ class StationaryIndependentSEM(SEMBase):
     @staticmethod
     def static():
         X = lambda noise, t, sample: noise
-        Z = lambda noise, t, sample: noise
+        Z = lambda noise, t, sample: noise        
         Y = (
             lambda noise, t, sample: -2 * np.exp(-((sample["X"][t] - 1) ** 2) - (sample["Z"][t] - 1) ** 2)
             - np.exp(-((sample["X"][t] + 1) ** 2) - sample["Z"][t] ** 2)

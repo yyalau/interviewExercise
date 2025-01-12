@@ -33,7 +33,18 @@ class newDict:
 
     def items(self):
         return self.data.items()
+    
+    def add(self, key, *, t=0, trial=0, value = None):
 
+        if self.data.get(key) is not None: 
+            return 
+        
+        self.data[key] = self.default(self.nT, self.nTrials)
+
+    def update(self, *others):        
+        for other in others:
+            assert isinstance(other, (dict, newDict )), "newd must be a dictionary or hDict"
+            self.data.update(other)
 
 # TODO: not well structured
 class gDict(newDict):
@@ -87,21 +98,24 @@ class hDict(newDict):
             for es in variables
         }
         
-        
+
+class esDict(newDict):
     
-    def add(self, key, *, t=0, trial=0, value = None):
-
-        if self.data.get(key) is not None: 
-            return 
+    def __init__(self, exp_sets, nT=1, nTrials=1):
+        super().__init__()
+        self.exp_sets = exp_sets
+        self.nT = 1
+        self.nTrials = 1
         
-        self.data[key] = self.default(self.nT, self.nTrials)
-
-    def update(self, *others):        
-        for other in others:
-            assert isinstance(other, (dict, hDict)), "newd must be a dictionary or hDict"
-            self.data.update(other)
         
-
+        self.default = lambda nT, nTrials, es_l: np.array([[[None] * es_l] * nTrials] * nT)
+        
+        self.data = {
+            es: (
+                self.default(nT, nTrials, len(es))
+            )
+            for es in exp_sets
+        }
 # test add and update function
 # if __name__ == "__main__":
 #     A = hDict(variables=[], nT=4, nTrials=1)

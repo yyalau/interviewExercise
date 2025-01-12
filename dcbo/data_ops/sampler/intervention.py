@@ -7,7 +7,7 @@ from collections import OrderedDict
 
 
 class DSamplerInv:
-    def __init__(self, semhat, ):
+    def __init__(self, semhat):
         # super().__init__(semhat, nT, n_samples, variables)
         self.sem = semhat
         self.nT = semhat.nT
@@ -19,40 +19,38 @@ class DSamplerInv:
         self,
         initial_values: Optional[dict[str, Union[int, float]]] = None,
         interv_levels: Optional[dict[str, Union[np.array]]] = None,
-        n_samples=5,
+        n_samples=1,
+        moment=0,
     ):
-        def __sample(initial_values, interv_levels, moment):
         
-            samples = hDict(
-                variables=self.variables,
-                nT=self.nT,
-                nTrials=n_samples,
-                default=lambda x, y: np.zeros((x, y)),
-            )
-            
-            if initial_values is None:
-                initial_values = hDict(variables=self.variables)
-
-            if interv_levels is None:
-                interv_levels = hDict(variables=self.variables, nT=self.nT)
-
-            for t in range(self.nT):
-                # import ipdb; ipdb.set_trace()
-                sem_func = self.sem.dynamic(moment) if t >0 else self.sem.static(moment)
-                for var, function in sem_func.items():
-                    samples[var][t, :] = self.select_value(
-                        function[0,0],
-                        initial_values[var][0, 0],
-                        interv_levels[var][t, 0],
-                        var,
-                        t,
-                        samples,
-                        n_samples,
-                    ).reshape(-1)        
-            return samples
+        samples = hDict(
+            variables=self.variables,
+            nT=self.nT,
+            nTrials=n_samples,
+            default=lambda x, y: np.zeros((x, y)),
+        )
         
-        return {"mean": __sample(initial_values, interv_levels, moment=0), 
-                "variance": __sample(initial_values, interv_levels, moment=1)}
+        if initial_values is None:
+            initial_values = hDict(variables=self.variables)
+
+        if interv_levels is None:
+            interv_levels = hDict(variables=self.variables, nT=self.nT)
+
+        for t in range(self.nT):
+            # import ipdb; ipdb.set_trace()
+            sem_func = self.sem.dynamic(moment) if t >0 else self.sem.static(moment)
+            for var, function in sem_func.items():
+                samples[var][t, :] = self.select_value(
+                    function[0,0],
+                    initial_values[var][0, 0],
+                    interv_levels[var][t, 0],
+                    var,
+                    t,
+                    samples,
+                    n_samples,
+                ).reshape(-1)        
+        return samples
+        
     
     def select_value(self, function, init, interv, var, t, samples: hDict, n_samples):
         if init is not None:
