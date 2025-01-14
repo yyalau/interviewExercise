@@ -11,3 +11,4 @@ def tnode2var(tnode):
 
 def tvar2node(tvar,t):
     return tuple([Node(var.name, t) if var is not None else None for var in tvar ])
+

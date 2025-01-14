@@ -1,6 +1,9 @@
 from data_struct import hDict, Node
 import numpy as np
 from networkx.linalg.graphmatrix import adjacency_matrix
+import tensorflow_probability as tfp
+
+RBF = tfp.math.psd_kernels.ExponentiatedQuadratic
 
 class PriorBase:
     def __init__(self, G):
@@ -14,6 +17,8 @@ class PriorBase:
             nT=self.nT,
             nTrials=1,
         )
+        
+        self.K_func = RBF        
     
     def fit(self, data):
         """

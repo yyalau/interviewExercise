@@ -33,21 +33,20 @@ class ManualCausalEI(EIBase):
         self.variance_function = variance_function
         self.previous_variance = previous_variance
 
-    def evaluate(self, n_samples, i_lvls: np.ndarray, cmin, time = 0) -> np.ndarray:
+    def evaluate(self, samples, cmin) -> np.ndarray:
         """
         Computes the Expected Improvement.
 
         :param x: points where the acquisition is evaluated.
         """
-
-        mean = self.mean_function(n_samples, i_lvls)[self.v_target][time] + self.jitter
-        variance = self.variance_function(n_samples, i_lvls)[self.v_target][time] + self.previous_variance         
+        mean = self.mean_function(samples)[self.v_target] + self.jitter
+        variance = self.variance_function(samples)[self.v_target] + self.previous_variance         
         sd = np.sqrt(self.clipv(variance))
 
         u, pdf, cdf = self.get_stats(cmin, mean, sd)
         improvement = self.task * sd * (u * cdf + pdf)
 
-        return improvement
+        return improvement[0]
 
     @property
     def has_gradients(self) -> bool:

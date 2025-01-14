@@ -3,6 +3,7 @@ import numpy as np
 from sems import SEMBase
 from data_struct import hDict, Node, Var
 from data_ops import DSamplerInv
+from copy import deepcopy
 
 class Surrogate:
     def __init__(self, semhat):
@@ -11,15 +12,25 @@ class Surrogate:
         self.variables= semhat.vs
         self.data_sampler = DSamplerInv(semhat)
         
-    def create(self, t):
+    def create(self, t, interv_levels, es):
         # objective: get mean_f[t, null]
         # isampled: [t, N]
+                
         
-         
-        def __sample(n_samples, interv_levels, moment = 0):
+        def __sample(ilvl, interv_levels, moment = 0):
             
-            if interv_levels is None:
-                interv_levels = hDict(variables=self.variables, nT=1)
+            new_ilvls = deepcopy(interv_levels)
+            
+            n_samples = ilvl.shape[0]
+            if new_ilvls is None:
+                new_ilvls = hDict(variables=self.variables, nT=self.nT, nTrials=n_samples)
+            else:
+                if (new_ilvls.nTrials  != n_samples):   
+                    new_ilvls.duplicate(nTrials=n_samples)
+            
+            if es is not None:
+                for vid, var in enumerate(es):
+                    new_ilvls[var][t,:] = ilvl[:, vid]
             
             samples = hDict(
                 variables=self.variables,
@@ -32,42 +43,29 @@ class Surrogate:
             # if initial_values is None:
             #     initial_values = hDict(variables=self.variables)
 
-            if interv_levels is None:
-                interv_levels = hDict(variables=self.variables, nT=self.nT)
-
 
             # import ipdb; ipdb.set_trace()
             sem_func = self.sem.dynamic(moment) if t >0 else self.sem.static(moment)
             for var, function in sem_func.items():
                 samples[var][t,:] = self.select_value(
                     function[0,0],
-                    interv_levels[var][t, :],
+                    new_ilvls[var][t, :],
                     var,
                     t,
                     samples,
                     n_samples,
                 )
+            
+            samples.reduce(t=t)
+            # for var in self.variables:
+            #     samples[var] = np.array(samples[var][t,:] ) 
+            del new_ilvls
             return samples
         
-        # def __gen(moment):
-        #     fs = hDict(
-        #         variables=self.variables,
-        #         nT=self.nT,
-        #         nTrials=1,
-        #     )
-            
-        #     # TODO: can be optimized
-        #     for t in range(self.nT):
-        #         sem_func = self.sem.dynamic(moment) if t >0 else self.sem.static(moment)
-        #         for var, function in sem_func.items():
-        #             fs[var][t, 0] = function[0,0]
-            
-        #     return fs        
         
-        # mean = lambda n_samples: __sample(n_samples, 0)
-        # variance = lambda n_samples: __sample(n_samples, 1)
-        mean = lambda n_samples, interv_levels: __sample(n_samples, interv_levels, 0)
-        variance = lambda n_samples, interv_levels: __sample(n_samples, interv_levels, 1)
+        
+        mean = lambda ilvls: __sample(ilvls, interv_levels, 0)
+        variance = lambda ilvls: __sample(ilvls, interv_levels, 1)
         return mean, variance
     
     def select_value(self, function, interv, var, t, samples: hDict, n_samples):

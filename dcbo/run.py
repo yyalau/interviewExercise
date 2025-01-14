@@ -1,3 +1,7 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+
 import numpy as np
 from utils.graphs import get_generic_graph
 from sems.toy_sems import StationaryIndependentSEM
@@ -7,13 +11,12 @@ from utils.grids import get_interv_sampler
 from data_struct import hDict, Var, GraphObj, Node, esDict, IntervLog
 from data_ops import DatasetObs, DSamplerObs, DSamplerInv, DatasetInv
 from surrogates import PriorEmit, PriorTrans, Surrogate
-from bo import ManualCausalEI, CausalEI
+from bo import ManualCausalEI, CausalEI, BOModel
+from models import CausalRBF
 # define graph
 
 import tensorflow as tf
 
-physical_devices = tf.config.list_physical_devices("GPU")
-tf.config.set_visible_devices(physical_devices[5], "GPU")
 
 
 nT = 3
@@ -66,13 +69,15 @@ G = get_generic_graph(
     nodes=["X", "Z", "Y"],
     target_node="Y",
 )
+
+
 print(G)
 
 """
 digraph { rankdir=LR; X_0 -> Y_0; Z_0 -> Y_0; X_1 -> Y_1; Z_1 -> Y_1; X_2 -> Y_2; Z_2 -> Y_2; X_3 -> Y_3; Z_3 -> Y_3;  X_0 -> X_1; Z_0 -> Z_1; Y_0 -> Y_1; X_1 -> X_2; Z_1 -> Z_2; Y_1 -> Y_2; X_2 -> X_3; Z_2 -> Z_3; Y_2 -> Y_3;  { rank=same; X_0 Z_0 Y_0 } { rank=same; X_1 Z_1 Y_1 } { rank=same; X_2 Z_2 Y_2 } { rank=same; X_3 Z_3 Y_3 }  }
 """
 
-G = GraphObj(graph=G, nT=nT)
+G = GraphObj(graph=G, nT=nT, target_var=target_variable)
 
 prior_emit = PriorEmit(G)
 prior_trans = PriorTrans(G)
@@ -88,19 +93,19 @@ print(semhat.get_edgekeys(Node("Y", 1), 0))
 init_tvalue = 1000000
 N = 10
 outcome_values = hDict(
-    variables=variables,
+    variables=G.variables,
     nT=nT,
     nTrials=N,
 )
 
 surr = Surrogate(semhat)
 # stores interventional data levels
-invDX = esDict(exp_sets=exploration_sets, nT=nT, nTrials=N)
 
 
 # ================================ t = 0, trial = 0 ================================
-
+# TODO : ORDERED DICT for SEM, because SEM has orders
 t = 0
+invDX = esDict(exp_sets=exploration_sets, nT=nT, nTrials=N)
 for es in exploration_sets:
     # sample from uniform distribution
     invDX[es][t,:] = interv_sampler[es].sample(N)
@@ -109,22 +114,18 @@ for es in exploration_sets:
 genInvY = DSamplerInv(semhat)
 invLogger = IntervLog()
 
-opt_ilvl = hDict(variables=variables, nT=nT, nTrials=1,)
+opt_ilvl = hDict(variables=G.variables, nT=nT, nTrials=1,)
 
 for es in exploration_sets:
 
     # inputs N sampled points from interv domain
-    temp_ilvl =  hDict(variables=variables, nT=nT, nTrials=N, )
-    for vid, var in enumerate(es):
-        temp_ilvl[var][t,:] = invDX[es][t,:, vid]    
+    # temp_ilvl =  hDict(variables=variables, nT=nT, nTrials=N)
+    # for vid, var in enumerate(es):
+    #     temp_ilvl[var][t,:] = invDX[es][t,:, vid]    
     
-    # TODO: add temp_ilvl here
-    mean_f, variance_f = surr.create(t = t)
-    
+    mean_f, variance_f = surr.create(t = t, interv_levels=opt_ilvl, es = es)    
     acq = ManualCausalEI(target_variable, mean_f, variance_f, )
-    
-    # TODO" remove temp_ilvl
-    improvements = acq.evaluate(N, temp_ilvl, cmin = init_tvalue, time = t)
+    improvements = acq.evaluate(invDX[es][t], cmin = init_tvalue)
     
     invLogger.update(
         t = 0,
@@ -160,14 +161,14 @@ bo_models = hDict(variables=exploration_sets, nT=nT, nTrials=1,)
 # assert self.interventional_data_x[temporal_index][exploration_set] is not None
 # assert self.interventional_data_y[temporal_index][exploration_set] is not None
 
-# for es in exploration_sets:
-#     if bo_models[es][t,0] is None:
+for es in exploration_sets[0:]:
+    if bo_models[es][t,0] is None:
         
-#         # NOTE: 
-#         # self.mean_function[temporal_index][es]
-#         # the es relies on intervention level
-#         mean_f, variance_f = surr.create(t = t, interv_levels=opt_ilvl)
-#         bo_models[es][t,0] = BOModel(es, mean_f, variance_f)
+
+        mean_f, variance_f = surr.create(t = t, interv_levels=opt_ilvl, es=es)        
+        # TODO: model.likelihood.variance.fix() is unsolved
+        # should be corresponding to log_prob of the GP model
+        bo_models[es][t,0] = BOModel(es, target_variable, mean_f, variance_f, )
 
 
 # record optimal intervention hat set / level / y_values

@@ -101,10 +101,7 @@ class SEMHat:
         samp = []
         for pa_node in edge_key:
             assert pa_node.t == t, "Time mismatch for prior/nodes and samples."
-            try:
-                samp += [samples[pa_node.name][pa_node.t, :].reshape(n_samples, -1)]
-            except:
-                import ipdb; ipdb.set_trace()
+            samp += [samples[pa_node.name][pa_node.t, :].reshape(n_samples, -1)]
         # 10, 3
         return np.hstack(samp)
 
