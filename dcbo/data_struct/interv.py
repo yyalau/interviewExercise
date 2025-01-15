@@ -1,9 +1,21 @@
 from collections import defaultdict
+from .newdict import esDict
+import numpy as np
+from copy import deepcopy
 
 class IntervLog:
-    def __init__(self):
+    
+    
+    def __init__(self, exp_sets, nT = 1, nTrials = 1):
         # along time
-        self.data = defaultdict(list)
+        '''
+        at each time t
+            for each trial
+                for each exploration set
+                    the intervention set and level
+        '''
+
+        self.n_keys = 4
         self.keys = {
             "impv": 0,
             "i_set": 1,
@@ -11,61 +23,75 @@ class IntervLog:
             "y_values": 3,
             "idx": 4,
         }
-        self.nT = 0
+        self.data = np.array([[[[None] * self.n_keys] * len(exp_sets)] * nTrials] * nT)
+        self.nT = nT
+        self.nTrials = nTrials
         
-        self.opt_data = defaultdict(list)   
+        self.set_idx = {es: idx for idx, es in enumerate(exp_sets)}
         
-    def get_opt(self, key = "impv"):
+        '''
+        opt_data 1
         
-        get_max = lambda x: max(x, key = lambda x: x[self.keys[key]])
-        
-        opt = self.opt_data[key]
-        
-        if not self.data:
-            return None
-        
-        # import ipdb; ipdb.set_trace()
-        
-        if not opt:        
-            for t in range(self.nT):
-                opt.append(get_max(self.data[t]))            
-            return opt
-        
-        
-        for t in range(len(opt) -1, self.nT):          
-            opt.append(get_max(self.data[t]))
-        return opt
+        at each time t
+            (tuple) the optimal es set and intervention level
+            
+        opt_data 2
+        at each time t
+            for each trial
+                (tuple) the optimal es set and intervention level
+        '''
+    def get_max(self, x):
+        try:
+            return max([v for v in x if v[0] is not None], key=lambda x: x[self.keys["impv"]])
+        except:
+            import ipdb; ipdb.set_trace()
+    def get_opt_ptrial(self, t, trial):
+        opt = self.data[t, trial]
+        return self.get_max(opt)
+    
 
-    def update_y(self, t, y_values):
-        
-        for k, v in self.opt_data.items():
-            v[t][self.keys["y_values"]] = y_values
-                
+    def get_opt(self, t):
+        return self.get_max(self.opt_ptrial[t])
+    
 
-    def update(self, t, *, impv,  y_values, i_set, i_level):
+    @property
+    def sol(self):
+        r = np.array([[None]*self.n_keys]* self.nT)        
+        for t in range(self.nT):
+            if not np.all(self.data[t] == None):
+                r[t] = self.get_opt(t)
+        return r
+    
+    @property
+    def opt_ptrial(self):
+        r = np.array([[[None]*self.n_keys]* self.nTrials]* self.nT )
         
-        assert t +1 >= self.nT, "Time should be greater than or equal to the current time"
+        for t in range(self.nT):
+            for trial in range(self.nTrials):
+                if not np.all(self.data[t, trial] == None):
+                    r[t, trial] = self.get_opt_ptrial(t, trial)
+        return r
+    
+    def update_y(self, t, trial, es, y_values):
+        self.data[t, trial, self.set_idx[es]][self.keys["y_values"]] = y_values
+                        
 
-        self.nT = max(self.nT, t + 1)
-        
-        self.data[t].append([impv, i_set, i_level, y_values])
-        
+    def update(self, t, trial, *, impv,  y_values, i_set, i_level):
+        self.data[t,trial, self.set_idx[i_set]] = np.array([impv, i_set, i_level, y_values], dtype = object)
         
 if __name__ == "__main__":
-    il = IntervLog()
-    il.update(0, impv = 0.5, y_values = None, i_set = "X", i_level = 0.1)
-    il.update(0, impv = 0.6, y_values = None, i_set = "X", i_level = 0.2)
-    il.update(0, impv = 0.7, y_values = None, i_set = "X", i_level = 0.1)
-    il.update(1, impv = 0.8, y_values = None, i_set = "X", i_level = 0.4)
-    il.update(1, impv = 0.9, y_values = None, i_set = "X", i_level = 0.5)
+    nT = 4; nTrials = 5
+    il = IntervLog( exp_sets= ('X','Z', 'XZ'), nT = nT, nTrials = nTrials)
+    il.update(0, 0, impv = 10, y_values = 100, i_set = "X", i_level = 1)
+    il.update(0, 0, impv = 20, y_values = 200, i_set = "Z", i_level = 2)
+    il.update(0, 2, impv = 30, y_values = 300, i_set = "X", i_level = 3)
+    il.update(0, 3, impv = 40, y_values = 400, i_set = "Z", i_level = 4)
+    il.update(0, 3, impv = 30, y_values = 500, i_set = "X", i_level = 5)
+    il.update(1, 3, impv = 40, y_values = 600, i_set = "Z", i_level = 6)
+    il.update(1, 3, impv = 30, y_values = 700, i_set = "X", i_level = 7)
+    il.update(1, 3, impv = 40, y_values = 800, i_set = "Z", i_level = 8)
 
-    print(il.get_opt("impv"))
+    # print(il.data[0])
+    # print(il.opt_ptrial[0])
+    # print(il.sol[0])    
     
-    il.update(1, impv = 0.9, y_values = None, i_set = "X", i_level = 0.5)
-    # does not update afterall
-    # il.update(0, impv = 0.9, y_values = None, i_set = "X", i_level = 0.5)
-    print(il.get_opt("impv"))
-    print(il.get_opt("i_level"))
-    il.update_y(1,  0.9)
-    print(il.get_opt("impv"))
-    print(il.data)

@@ -36,8 +36,10 @@ class CausalRBF:
 
 
     def _apply(self, x1, x2, example_ndims=0):
-        x1_diag = tf.cast(self.var_fn(x1)[self.target_var][...,None][0],  dtype=tf.float32)
-        x2_diag = tf.cast(self.var_fn(x2)[self.target_var][...,None][0],  dtype=tf.float32)
+        
+        
+        x1_diag = self.var_fn(x1)[self.target_var][...,None][0]
+        x2_diag = self.var_fn(x2)[self.target_var][...,None][0]
         
         if example_ndims <=1:
             x1_diag = x1_diag[..., 0]
@@ -47,13 +49,13 @@ class CausalRBF:
         return result
 
     def _matrix(self, x1, x2):
-        x1_diag = tf.cast(self.var_fn(x1)[self.target_var][0,...,None], dtype=tf.float32)
-        x2_diag = tf.cast(self.var_fn(x2)[self.target_var][0,...,None], dtype=tf.float32)
+        x1_diag = tf.cast(self.var_fn(x1)[self.target_var][0,...,None], dtype=tf.float64)
+        x2_diag = tf.cast(self.var_fn(x2)[self.target_var][0,...,None], dtype=tf.float64)
         return tf.sqrt(x1_diag) @ tf.sqrt(tf.transpose(x2_diag))
 
 
 class GaussianRBF(CausalRBF, Quadratic):
-    def __init__(self, target_var, var_fn, amplitude=1, length_scale=None, power=None, inverse_length_scale=None, feature_ndims=1):
+    def __init__(self, target_var, var_fn, amplitude=1, length_scale=None, power = None, inverse_length_scale=None, feature_ndims=1):
         CausalRBF.__init__(
             self,
             target_var=target_var,
@@ -64,25 +66,29 @@ class GaussianRBF(CausalRBF, Quadratic):
             self,
             amplitude=amplitude,
             length_scale=length_scale,
+            power=power,
             inverse_length_scale=inverse_length_scale,
-            feature_ndims=feature_ndims,
-        )
+            feature_ndims=feature_ndims,            
 
+        )
+        
     def _apply(self, x1, x2, example_ndims=0):
         dist = Quadratic._apply(self, x1, x2, example_ndims)
         adjust = CausalRBF._apply(self, x1, x2, example_ndims)
-        
-        result = adjust + dist
-        if self.feature_ndims == 1:
-            return result[..., None]
+        result = tf.cast(adjust, dist.dtype) + dist
         return result
-    
-    def _matrix(self, x1, x2):
+
+    def _matrix(self, x1, x2):  
+        
         if self.feature_ndims == 1:
             dist = Quadratic._matrix(self, x1, x2)
         else:
-            dist = Quadratic._matrix(self, x1[..., None], x2[..., None])
-        return CausalRBF._matrix(self, x1, x2) + dist
+            dist = Quadratic._matrix(self, x1[...,None], x2[...,None])  
+            
+        adj = CausalRBF._matrix(self, x1, x2)
+        result = tf.cast(adj, dist.dtype) + dist
+        return result
+
 
 class GammaRBF(CausalRBF, Gamma):
     def __init__(self, target_var, var_fn, amplitude=1, length_scale=None, power = None, inverse_length_scale=None, feature_ndims=1):
@@ -105,25 +111,17 @@ class GammaRBF(CausalRBF, Gamma):
     def _apply(self, x1, x2, example_ndims=0):
         dist = Gamma._apply(self, x1, x2, example_ndims)
         adjust = CausalRBF._apply(self, x1, x2, example_ndims)
-        
-        result = adjust + dist
-        if self.feature_ndims == 1:
-            return result[...,None]
-        
+        result = tf.cast(adjust, dist.dtype) + dist
         return result
 
-    def _matrix(self, x1, x2):
+    def _matrix(self, x1, x2):  
+        import ipdb; ipdb.set_trace()
+        
         if self.feature_ndims == 1:
             dist = Gamma._matrix(self, x1, x2)
         else:
             dist = Gamma._matrix(self, x1[...,None], x2[...,None])  
-        return CausalRBF._matrix(self, x1, x2) + dist
-
-if __name__ == "__main__":
-
-
-    x = np.linspace(-3, 3, 100).reshape(-1, 1)
-    y = np.sin(x)
-
-
-    kernel = GaussianRBF(target_var=0, var_fn=lambda x: x, amplitude=1, length_scale=1, feature_ndims=1)
+            
+        adj = CausalRBF._matrix(self, x1, x2)
+        result = tf.cast(adj, dist.dtype) + dist
+        return result

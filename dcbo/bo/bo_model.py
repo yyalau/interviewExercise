@@ -2,7 +2,7 @@ from models import GPRegression, GaussianRBF, GammaRBF
 import tensorflow_probability as tfp
 
 tfd = tfp.distributions
-
+RBF = tfp.math.psd_kernels.ExponentiatedQuadratic
 
 class BOModel(GPRegression):
     def __init__(
@@ -19,12 +19,10 @@ class BOModel(GPRegression):
         use_gamma_prior=True,
     ):
         self.es = es
-        self.mean_f = mean_f
         self.variance_f = variance_f
         self.target_var = target_var
 
         def kernel_fn(amplitude, length_scale, feature_ndims):
-            
             if use_gamma_prior:
                 '''
                 power = alpha, length_scale = beta
@@ -45,15 +43,12 @@ class BOModel(GPRegression):
                 length_scale=length_scale,
                 feature_ndims=feature_ndims,
             )
-        
-        self.temp = kernel_fn(1, 1, len(es))
-        if use_gamma_prior:
-            tfd.Gamma(alpha, beta)
 
         super().__init__(
-            kernel_fn,
-            feature_ndims=len(es),
-            mean_fn=mean_f,
+            kernel_fn = kernel_fn,
+            feature_ndims=1,
+            # mean_fn=lambda x : mean_f(x)[target_var],
+            mean_fn=None,
             variance=variance,
             lengthscale=lengthscale,
             noise_var=noise_var,

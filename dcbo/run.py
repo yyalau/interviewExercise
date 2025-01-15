@@ -12,7 +12,6 @@ from data_struct import hDict, Var, GraphObj, Node, esDict, IntervLog
 from data_ops import DatasetObs, DSamplerObs, DSamplerInv, DatasetInv
 from surrogates import PriorEmit, PriorTrans, Surrogate
 from bo import ManualCausalEI, CausalEI, BOModel
-from models import CausalRBF
 # define graph
 
 import tensorflow as tf
@@ -99,82 +98,83 @@ outcome_values = hDict(
 )
 
 surr = Surrogate(semhat)
+D_Inv = DatasetInv(nT = nT, exp_sets=exploration_sets)
+
+
 # stores interventional data levels
 
 
-# ================================ t = 0, trial = 0 ================================
-# TODO : ORDERED DICT for SEM, because SEM has orders
+# TODO : TOPOLOGICALLY ORDERED DICT for SEM, because SEM has orders
 t = 0
 invDX = esDict(exp_sets=exploration_sets, nT=nT, nTrials=N)
-for es in exploration_sets:
-    # sample from uniform distribution
-    invDX[es][t,:] = interv_sampler[es].sample(N)
+# for es in exploration_sets:
+#     # sample from uniform distribution
+#     invDX[es][t,:] = interv_sampler[es].sample(N)
 
 # create intervention blanket
 genInvY = DSamplerInv(semhat)
-invLogger = IntervLog()
-
-opt_ilvl = hDict(variables=G.variables, nT=nT, nTrials=1,)
-
-for es in exploration_sets:
-
-    # inputs N sampled points from interv domain
-    # temp_ilvl =  hDict(variables=variables, nT=nT, nTrials=N)
-    # for vid, var in enumerate(es):
-    #     temp_ilvl[var][t,:] = invDX[es][t,:, vid]    
-    
-    mean_f, variance_f = surr.create(t = t, interv_levels=opt_ilvl, es = es)    
-    acq = ManualCausalEI(target_variable, mean_f, variance_f, )
-    improvements = acq.evaluate(invDX[es][t], cmin = init_tvalue)
-    
-    invLogger.update(
-        t = 0,
-        i_set=es,
-        i_level= invDX[es][t,(idx := np.argmax(improvements))],
-        impv = improvements[idx],
-        y_values=None,
-    )
-
-# update the optimal intervention
-_, best_es, best_lvl, _ = invLogger.get_opt()[t]
-for vid, var in enumerate(best_es):
-    opt_ilvl[var][t,0] = best_lvl[vid]
-
-# self.interventional_data_x[temporal_index][exploration_set]
-static_epsilon = hDict(variables=variables, nT=nT, nTrials=1, default=lambda x, y: np.random.randn(x, y))
-y_new = genObsY.sample(interv_levels= opt_ilvl,
-                       epsilon=static_epsilon,
-                       n_samples=1)[target_variable][t][0] #(1x1)
-
-D_Inv = DatasetInv(nT = nT, exp_sets=exploration_sets)
-D_Inv.update(
-    t = t,
-    es = best_es,
-    x = best_lvl,
-    y = y_new,
-)
-
-# ================================ t = 0, trial = 1 ================================
-
+invLogger = IntervLog(exp_sets=exploration_sets, nT=nT, nTrials=N)  
 bo_models = hDict(variables=exploration_sets, nT=nT, nTrials=1,)
+opt_ilvl = hDict(variables=G.variables, nT=nT, nTrials=1,)
+static_epsilon = hDict(variables=variables, nT=nT, nTrials=1, default=lambda x, y: np.zeros((x,y)))
 
-# assert self.interventional_data_x[temporal_index][exploration_set] is not None
-# assert self.interventional_data_y[temporal_index][exploration_set] is not None
+for trial in range(N):
+    
+    # init invLogger again? now only computes the optimal of each trial
+    # is it optimal of each trial, or optimal of all trials/ one time step?
 
-for es in exploration_sets[0:]:
-    if bo_models[es][t,0] is None:
+    for es in exploration_sets:
+        mean_f, variance_f = surr.create(t = t, interv_levels=opt_ilvl, es=es)     
         
+        
+        if bo_models[es][t,0] is None:        
+            acq = ManualCausalEI(target_variable, mean_f, variance_f, )
+        else:
+            # TODO
+            acq = CausalEI()    
+        
+        invDX[es][t,:] = interv_sampler[es].sample(N)
+        # TODO: EI / cost_of_acquisition, record total_intervention_cost
+        improvements = acq.evaluate(invDX[es][t,:], cmin = init_tvalue)
+        invLogger.update(
+            t = 0,
+            trial = trial,
+            i_set=es,
+            i_level= invDX[es][t,(idx := np.argmax(improvements))],
+            impv = improvements[idx],
+            y_values=None,
+        )
 
-        mean_f, variance_f = surr.create(t = t, interv_levels=opt_ilvl, es=es)        
+    
+    # update the optimal intervention
+    _, best_es, best_lvl, _ = invLogger.get_opt_ptrial(t, trial)
+    for vid, var in enumerate(best_es):
+        opt_ilvl[var][t,0] = best_lvl[vid]
+        
+    # self.interventional_data_x[temporal_index][exploration_set]
+    y_new = genObsY.sample(interv_levels= opt_ilvl,
+                        epsilon=static_epsilon,
+                        n_samples=1)[target_variable][t][0] #(1x1)
+    D_Inv.update(
+        t = t,
+        es = best_es,
+        x = best_lvl,
+        y = y_new,
+    )
+    invLogger.update_y(t, trial, best_es, y_new)
+    
+    
+    dataIX, dataIY = D_Inv.get(best_es, t)                
+    if bo_models[best_es][t,0] is None:
         # TODO: model.likelihood.variance.fix() is unsolved
         # should be corresponding to log_prob of the GP model
-        bo_models[es][t,0] = BOModel(es, target_variable, mean_f, variance_f, )
+        mean_f, variance_f = surr.create(t = t, interv_levels=opt_ilvl, es=best_es)  
+        bo_models[best_es][t,0] = BOModel(es, target_variable, mean_f, variance_f, )        
+    bo_models[best_es][t,0].fit(dataIX, dataIY.reshape(-1))
 
+    # TODO: update opt_ilvl
 
-# record optimal intervention hat set / level / y_values
-
-# add new data to intervention datatset (using target_functions)
-
+print(invLogger.sol)
 
 # number of trials for each time step
 # DCBO.run ==>  oi_set, oi_level

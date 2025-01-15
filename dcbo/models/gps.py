@@ -46,10 +46,14 @@ class GPRegression:
         self,
         y,
     ):
-        with tf.GradientTape() as tape:
-            loss = -self.gp.log_prob(
-                y,
-            )
+        try:
+            with tf.GradientTape() as tape:
+                loss = -self.gp.log_prob(y,)
+        except:
+            import ipdb
+
+            ipdb.set_trace()
+
         grads = tape.gradient(loss, self.gp.trainable_variables)
         self.optimizer.apply_gradients(zip(grads, self.gp.trainable_variables))
         return loss
@@ -69,7 +73,7 @@ class GPRegression:
 
         self.X = x
         self.Y = y
-
+        
         # We'll use an unconditioned GP to train the kernel parameters.
         self.gp = tfd.GaussianProcess(
             kernel=self.kernel,
@@ -77,7 +81,14 @@ class GPRegression:
             index_points=x,
             observation_noise_variance=self.observation_noise_variance,
         )
-
+        
+        try:
+            self.gp.log_prob(y)
+        except:
+            import ipdb
+            ipdb.set_trace()
+            self.gp
+            
         for i in range(n_restart):
             neg_log_likelihood_ = self.optimize(y)
             if i % 50 == 0 and verbose:
@@ -108,11 +119,7 @@ class GPRegression:
 
     def predict(self, x):
         gprm_fit = self.gprm()(x[..., None])
-        # import ipdb; ipdb.set_trace()
-
-        return gprm_fit.mean().numpy().reshape(-1), gprm_fit.variance().numpy().reshape(
-            -1
-        )
+        return gprm_fit.mean().reshape(-1), gprm_fit.variance().reshape(-1)
 
 
 # if __name__ == "__main__":

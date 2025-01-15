@@ -31,32 +31,32 @@ class CausalEI(EIBase):
         """
         
         gprm = gp_model.gprm(x)
-        acq_f = gpEI(predictive_distribtuion = gprm, 
+        acq_f = gpEI(predictive_distribution = gprm, 
              observations = gp_model.observations,
              exploration = self.jitter)
         improvement = acq_f()
         
         return improvement
 
-    def evaluate_with_gradients(self, gp_model, gp_grad, x: np.ndarray, ):
-        """
-        Computes the Expected Improvement and its derivative.
+    # def evaluate_with_gradients(self, gp_model, gp_grad, x: np.ndarray, ):
+    #     """
+    #     Computes the Expected Improvement and its derivative.
 
-        :param x: locations where the evaluation with gradients is done.
-        """
+    #     :param x: locations where the evaluation with gradients is done.
+    #     """
 
-        dmean_dx, dvariance_dx = gp_grad
-        dstandard_deviation_dx = dvariance_dx / (2 * standard_deviation)
+    #     dmean_dx, dvariance_dx = gp_grad
+    #     dstandard_deviation_dx = dvariance_dx / (2 * standard_deviation)
 
-        mean += self.jitter
-        u, pdf, cdf = self.stats(self.current_global_min, mean, standard_deviation)
-        if self.task == "min":
-            dimprovement_dx = dstandard_deviation_dx * pdf - cdf * dmean_dx
-        else:
-            dimprovement_dx = -(dstandard_deviation_dx * pdf - cdf * dmean_dx)
+    #     mean += self.jitter
+    #     u, pdf, cdf = self.stats(self.current_global_min, mean, standard_deviation)
+    #     if self.task == "min":
+    #         dimprovement_dx = dstandard_deviation_dx * pdf - cdf * dmean_dx
+    #     else:
+    #         dimprovement_dx = -(dstandard_deviation_dx * pdf - cdf * dmean_dx)
 
-        improvement = self.evaluate(gp_model, x)
-        return improvement, dimprovement_dx
+    #     improvement = self.evaluate(gp_model, x)
+    #     return improvement, dimprovement_dx
 
     @property
     def has_gradients(self) -> bool:
