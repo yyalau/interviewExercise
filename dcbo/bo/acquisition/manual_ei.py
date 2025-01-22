@@ -1,5 +1,6 @@
 import numpy as np
 from .base import EIBase
+import tensorflow as tf
 
 # from emukit.core.acquisition import Acquisition
 # from emukit.core.interfaces import IDifferentiable, IModel
@@ -13,6 +14,7 @@ class ManualCausalEI(EIBase):
         variance_function,
         previous_variance = 1,
         task = "min",
+        cmin = 0,
         jitter: float = 0.0,
     ) -> None:
         """
@@ -32,8 +34,9 @@ class ManualCausalEI(EIBase):
         self.mean_function = mean_function
         self.variance_function = variance_function
         self.previous_variance = previous_variance
+        self.cmin = cmin
 
-    def evaluate(self, samples, cmin) -> np.ndarray:
+    def evaluate(self, samples) -> np.ndarray:
         """
         Computes the Expected Improvement.
 
@@ -43,10 +46,10 @@ class ManualCausalEI(EIBase):
         variance = self.variance_function(samples)[self.v_target] + self.previous_variance         
         sd = np.sqrt(self.clipv(variance))
 
-        u, pdf, cdf = self.get_stats(cmin, mean, sd)
+        u, pdf, cdf = self.get_stats(self.cmin, mean, sd)
         improvement = self.task * sd * (u * cdf + pdf)
 
-        return improvement[0]
+        return tf.reshape(improvement, -1).numpy()
 
     @property
     def has_gradients(self) -> bool:

@@ -4,13 +4,13 @@ from sems import SEMBase
 from data_struct import hDict, Node, Var
 from data_ops import DSamplerInv
 from copy import deepcopy
+import tensorflow as tf
 
 class Surrogate:
     def __init__(self, semhat):
         self.sem = semhat
         self.nT = semhat.nT
         self.variables= semhat.vs
-        self.data_sampler = DSamplerInv(semhat)
         
     def create(self, t, interv_levels, es):
         # objective: get mean_f[t, null]
@@ -36,7 +36,7 @@ class Surrogate:
                 variables=self.variables,
                 nT=self.nT,
                 nTrials=n_samples,
-                default=lambda x, y: np.zeros((x, y)),
+                default=lambda x, y: [None]*x,
             )
             
             # original repo does not use initial_values            
@@ -45,24 +45,32 @@ class Surrogate:
 
 
             # import ipdb; ipdb.set_trace()
-            sem_func = self.sem.dynamic(moment) if t >0 else self.sem.static(moment)
-            for var, function in sem_func.items():
-                samples[var][t,:] = self.select_value(
-                    function[0,0],
-                    new_ilvls[var][t, :],
-                    var,
-                    t,
-                    samples,
-                    n_samples,
-                )
             
-            samples.reduce(t=t)
-            # for var in self.variables:
-            #     samples[var] = np.array(samples[var][t,:] ) 
+            for hist_t in range(t+1):
+                sem_func = self.sem.dynamic(moment) if hist_t >0 else self.sem.static(moment)
+                for var, function in sem_func.items():
+                    haha = self.select_value(
+                        function[0,0],
+                        new_ilvls[var][hist_t, :],
+                        var,
+                        hist_t,
+                        samples,
+                        n_samples,
+                    )   
+                    samples[var][hist_t] = haha
+            
+            new_samples = hDict(
+                variables=self.variables,
+                nT=1,
+                nTrials=n_samples,
+                default=lambda x, y: None,
+            )
+            
+            for var in self.variables:
+                new_samples[var] = samples[var][t] 
+            
             del new_ilvls
-            return samples
-        
-        
+            return new_samples        
         
         mean = lambda ilvls: __sample(ilvls, interv_levels, 0)
         variance = lambda ilvls: __sample(ilvls, interv_levels, 1)
@@ -73,6 +81,8 @@ class Surrogate:
         # n_samples = samples[var][t,:].shape[0]
 
         if all(v is not None for v in interv):
+            if isinstance(interv, np.ndarray):
+                return tf.convert_to_tensor(interv, tf.float64)
             return interv
                     
         node = Node(var, t)

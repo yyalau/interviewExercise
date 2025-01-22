@@ -7,6 +7,7 @@ from .base import EIBase
 class CausalEI(EIBase):
     def __init__(
         self,
+        bo_model,
         task = "min",
         jitter: float = 0.0,
     ) -> None:
@@ -22,21 +23,22 @@ class CausalEI(EIBase):
         :param jitter: parameter to encourage extra exploration.
         """
         super().__init__(task, jitter)
+        self.bo_model = bo_model
 
-    def evaluate(self, gp_model, x: np.ndarray) -> np.ndarray:
+    def evaluate(self, x: np.ndarray) -> np.ndarray:
         """
         Computes the Expected Improvement.
 
         :param x: points where the acquisition is evaluated.
         """
-        
-        gprm = gp_model.gprm(x)
-        acq_f = gpEI(predictive_distribution = gprm, 
-             observations = gp_model.observations,
+        gprm = self.bo_model.gprm()(x)
+        gpei = gpEI(predictive_distribution = gprm, 
+             observations = gprm.observations,
              exploration = self.jitter)
-        improvement = acq_f()
         
-        return improvement
+        improvement = gpei() # sames as gpei(x)
+        
+        return improvement.numpy()
 
     # def evaluate_with_gradients(self, gp_model, gp_grad, x: np.ndarray, ):
     #     """

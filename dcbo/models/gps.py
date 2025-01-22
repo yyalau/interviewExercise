@@ -46,13 +46,8 @@ class GPRegression:
         self,
         y,
     ):
-        try:
-            with tf.GradientTape() as tape:
-                loss = -self.gp.log_prob(y,)
-        except:
-            import ipdb
-
-            ipdb.set_trace()
+        with tf.GradientTape() as tape:
+            loss = -self.gp.log_prob(y,)
 
         grads = tape.gradient(loss, self.gp.trainable_variables)
         self.optimizer.apply_gradients(zip(grads, self.gp.trainable_variables))
@@ -68,7 +63,7 @@ class GPRegression:
         verbose=False,
     ):
         """
-        TODO: ard feature is not implemented
+        TODO: ARD feature is not implemented
         """
 
         self.X = x
@@ -82,13 +77,6 @@ class GPRegression:
             observation_noise_variance=self.observation_noise_variance,
         )
         
-        try:
-            self.gp.log_prob(y)
-        except:
-            import ipdb
-            ipdb.set_trace()
-            self.gp
-            
         for i in range(n_restart):
             neg_log_likelihood_ = self.optimize(y)
             if i % 50 == 0 and verbose:
@@ -119,7 +107,7 @@ class GPRegression:
 
     def predict(self, x):
         gprm_fit = self.gprm()(x[..., None])
-        return gprm_fit.mean().reshape(-1), gprm_fit.variance().reshape(-1)
+        return tf.reshape(gprm_fit.mean(), (x.shape[0], -1)), tf.reshape(gprm_fit.variance(), (x.shape[0], -1))
 
 
 # if __name__ == "__main__":

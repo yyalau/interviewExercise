@@ -1,8 +1,8 @@
 from ..base import PriorBase
 import numpy as np
-from sklearn.neighbors import KernelDensity
 from data_struct import hDict
-from models import GPRegression
+from models import GPRegression, KernelDensity
+from tensorflow_probability import distributions as tfd
 
 
 class PriorEmit(PriorBase):
@@ -28,7 +28,7 @@ class PriorEmit(PriorBase):
         """
 
         funcs.add(key=(k := (None, pa_node.name)))
-        funcs[k][pa_node.t, 0] = KernelDensity(kernel="gaussian").fit(
+        funcs[k][pa_node.t, 0] = KernelDensity(kernel=tfd.Normal).fit(
             pa_value[..., None]
         )
 
@@ -38,9 +38,7 @@ class PriorEmit(PriorBase):
         """
         Normal node operations.
         """
-
         assert pa_node.t == ch_node.t, "Time mismatch for emission nodes."
-
         funcs.add(key=(k := (pa_node.name,)))
         funcs[k][pa_node.t, 0] = GPRegression(kernel_fn=self.K_func, feature_ndims=1).fit(
             x=pa_value[..., None], y=ch_value

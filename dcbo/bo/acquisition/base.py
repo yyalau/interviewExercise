@@ -1,7 +1,8 @@
 import numpy as np  
 from typing import Tuple
 import tensorflow_probability as tfp
-tfd = tfp.distributions 
+tfd = tfp.distributions
+import tensorflow as tf 
 # import tfp.experimental.bayesopt.acquisition as tfpbo
 
 class EIBase:
@@ -24,14 +25,14 @@ class EIBase:
         dist = tfd.Normal( loc=mean, scale=sd)
         
         z = (x - mean) / sd
-        pdf = dist.prob(z).numpy()
-        cdf = dist.cdf(z).numpy()
+        pdf = dist.prob(z)
+        cdf = dist.cdf(z)
         return z, pdf, cdf
 
     def clipv(self, variance):
-        if np.any(np.isnan(variance)):
-            variance[np.isnan(variance)] = 0
-        elif np.any(variance < 0):
+        if tf.reduce_any(tf.math.is_nan(variance)):
+            variance[tf.isnan(variance)] = 0
+        elif tf.reduce_any(variance < 0):
             variance = variance.clip(0.0001)
         return variance
 

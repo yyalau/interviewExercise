@@ -115,7 +115,6 @@ class GammaRBF(CausalRBF, Gamma):
         return result
 
     def _matrix(self, x1, x2):  
-        import ipdb; ipdb.set_trace()
         
         if self.feature_ndims == 1:
             dist = Gamma._matrix(self, x1, x2)

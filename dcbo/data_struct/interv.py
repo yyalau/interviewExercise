@@ -41,10 +41,12 @@ class IntervLog:
                 (tuple) the optimal es set and intervention level
         '''
     def get_max(self, x):
-        try:
-            return max([v for v in x if v[0] is not None], key=lambda x: x[self.keys["impv"]])
-        except:
-            import ipdb; ipdb.set_trace()
+        
+        temp = [v for v in x if v[0] is not None]
+        if len(temp) == 0:
+            return None        
+        return max(temp, key=lambda x: x[self.keys["impv"]])
+
     def get_opt_ptrial(self, t, trial):
         opt = self.data[t, trial]
         return self.get_max(opt)
@@ -58,8 +60,8 @@ class IntervLog:
     def sol(self):
         r = np.array([[None]*self.n_keys]* self.nT)        
         for t in range(self.nT):
-            if not np.all(self.data[t] == None):
-                r[t] = self.get_opt(t)
+            # TODO: verify if [1:] is correct   
+            r[t] = self.get_max(self.opt_ptrial[t][1:])
         return r
     
     @property
@@ -68,8 +70,7 @@ class IntervLog:
         
         for t in range(self.nT):
             for trial in range(self.nTrials):
-                if not np.all(self.data[t, trial] == None):
-                    r[t, trial] = self.get_opt_ptrial(t, trial)
+                r[t, trial] = self.get_opt_ptrial(t, trial)
         return r
     
     def update_y(self, t, trial, es, y_values):
@@ -78,7 +79,10 @@ class IntervLog:
 
     def update(self, t, trial, *, impv,  y_values, i_set, i_level):
         self.data[t,trial, self.set_idx[i_set]] = np.array([impv, i_set, i_level, y_values], dtype = object)
-        
+    
+    
+    def __repr__(self):
+        return self.data.__repr__()
 if __name__ == "__main__":
     nT = 4; nTrials = 5
     il = IntervLog( exp_sets= ('X','Z', 'XZ'), nT = nT, nTrials = nTrials)

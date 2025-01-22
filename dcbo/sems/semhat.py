@@ -3,7 +3,7 @@ from surrogates import PriorEmit, PriorTrans
 from data_struct import GraphObj, hDict, Node
 import numpy as np
 from utils.tools import tnode2var, tvar2node
-
+import tensorflow as tf
 
 class SEMHat:
     def __init__(self, G: GraphObj, gp_emit, gp_trans):
@@ -95,13 +95,13 @@ class SEMHat:
         if l_key == 3 and edge_key[1] == t:
             pa_node, _, _ = edge_key
             assert pa_node.t == t, "Time mismatch for prior/node and samples."
-            return samples[pa_node.name][pa_node.t, :].reshape(n_samples, -1)
+            return tf.reshape(samples[pa_node.name][pa_node.t], (n_samples, -1))
 
         # otherwise
         samp = []
         for pa_node in edge_key:
             assert pa_node.t == t, "Time mismatch for prior/nodes and samples."
-            samp += [samples[pa_node.name][pa_node.t, :].reshape(n_samples, -1)]
+            samp += [tf.reshape(samples[pa_node.name][pa_node.t], (n_samples, -1))]
         # 10, 3
         return np.hstack(samp)
 
@@ -111,7 +111,7 @@ class SEMHat:
         #  Assigns the KDE for the marginal
         return lambda t, margin_id, n_samples: self.gp_emit.f[margin_id][t, 0].sample(
             n_samples
-        ).reshape(-1)
+        )
 
     def get_gp_emit(self, moment: int) -> Callable:
         #  Within time-slice emission only

@@ -53,10 +53,11 @@ class newDict:
         for k, v in self.data.items():
             self.data[k] = v.repeat(nTrials, axis=-1)
 
-    def reduce(self, t):
-        self.nT = 1
-        for k, v in self.data.items():
-            self.data[k] = np.array([v[t]])
+    # def reduce(self, t):
+                
+    #     self.nT = 1
+    #     for k, v in self.data.items():
+    #         self.data[k] = np.array([v[t]])
 
 
 # TODO: not well structured
