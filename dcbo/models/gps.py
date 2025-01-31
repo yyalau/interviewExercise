@@ -1,13 +1,15 @@
 import numpy as np
 import tensorflow.compat.v2 as tf
 import tensorflow_probability as tfp
+from .base import NLLBase
+
 
 tfb = tfp.bijectors
 tfd = tfp.distributions
 psd_kernels = tfp.math.psd_kernels
 
 
-class GPRegression:
+class GPRegression(NLLBase):
     def __init__(
         self,
         kernel_fn,
@@ -19,7 +21,6 @@ class GPRegression:
     ):
         self.X = None
         self.Y = None
-        self.gp = None
         self.mean_fn = mean_fn
 
         self.amplitude = tfp.util.TransformedVariable(
@@ -37,21 +38,22 @@ class GPRegression:
             length_scale=self.length_scale,
             feature_ndims=feature_ndims,
         )
-        self.optimizer = tf.optimizers.Adam(learning_rate=0.05, beta_1=0.5, beta_2=0.99)
+        
+        super().__init__(model = None)
 
         # https://towardsdatascience.com/gaussian-process-models-7ebce1feb83d
 
-    @tf.function
-    def optimize(
-        self,
-        y,
-    ):
-        with tf.GradientTape() as tape:
-            loss = -self.gp.log_prob(y,)
+    # @tf.function
+    # def optimize(
+    #     self,
+    #     y,
+    # ):
+    #     with tf.GradientTape() as tape:
+    #         loss = -self.model.log_prob(y,)
 
-        grads = tape.gradient(loss, self.gp.trainable_variables)
-        self.optimizer.apply_gradients(zip(grads, self.gp.trainable_variables))
-        return loss
+    #     grads = tape.gradient(loss, self.model.trainable_variables)
+    #     self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+    #     return loss
 
     def fit(
         self,
@@ -70,39 +72,38 @@ class GPRegression:
         self.Y = y
         
         # We'll use an unconditioned GP to train the kernel parameters.
-        self.gp = tfd.GaussianProcess(
+        self.model = tfd.GaussianProcess(
             kernel=self.kernel,
             mean_fn=self.mean_fn,
             index_points=x,
             observation_noise_variance=self.observation_noise_variance,
         )
         
-        for i in range(n_restart):
-            neg_log_likelihood_ = self.optimize(y)
-            if i % 50 == 0 and verbose:
-                print("Step {}: NLL = {}".format(i, neg_log_likelihood_))
-
+        nll = super().fit(y, n_restart=n_restart, verbose=verbose)      
+        
         if verbose:
-            print("Final NLL = {}".format(neg_log_likelihood_))
-
-            print("Trained parameters:")
-            print("amplitude: {}".format(self.amplitude._value().numpy()))
-            print("length_scale: {}".format(self.length_scale._value().numpy()))
-            print(
-                "observation_noise_variance: {}".format(
-                    self.observation_noise_variance._value().numpy()
-                )
-            )
+            self.logging(nll)
 
         return self
 
+    def logging(self, nll):
+        print("Final NLL = {}".format(nll))
+        print("Trained parameters:")
+        print("amplitude: {}".format(self.amplitude._value().numpy()))
+        print("length_scale: {}".format(self.length_scale._value().numpy()))
+        print(
+            "observation_noise_variance: {}".format(
+                self.observation_noise_variance._value().numpy()
+            )
+        )
+
     def gprm(self):
         return lambda inputs: tfd.GaussianProcessRegressionModel(
-            kernel=self.gp.kernel,
+            kernel=self.model.kernel,
             index_points=inputs,
             observation_index_points=self.X,
             observations=self.Y,
-            observation_noise_variance=self.gp.observation_noise_variance,
+            observation_noise_variance=self.model.observation_noise_variance,
         )
 
     def predict(self, x):

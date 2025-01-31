@@ -9,7 +9,7 @@ from sems import SEMHat
 from utils.tools import powerset
 from utils.grids import get_interv_sampler
 from data_struct import hDict, Var, GraphObj, Node, esDict, IntervLog
-from data_ops import DatasetObs, DSamplerObs, DSamplerInv, DatasetInv
+from data_ops import DatasetObsDCBO, DSamplerObsDCBO, DSamplerInv, DatasetInv
 from surrogates import PriorEmit, PriorTrans, Surrogate
 from bo import ManualCausalEI, CausalEI, BOModel
 from bo import FixedCost
@@ -36,7 +36,7 @@ epsilon = hDict(variables=variables, nT=nT, nTrials=n_samples, default=np.random
 initial_values = hDict(variables=variables)
 interv_levels = hDict(variables=variables, nT=nT)
 
-genObsY = DSamplerObs(
+genObsY = DSamplerObsDCBO(
     sem=sem,
     nT=nT,
     variables=variables,
@@ -50,7 +50,7 @@ obsY = genObsY.sample(
 )
 
 
-D_O = DatasetObs(
+D_O = DatasetObsDCBO(
     nT=nT,
     n_samples=n_samples,
     initial_values=initial_values,

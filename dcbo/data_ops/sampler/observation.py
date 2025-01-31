@@ -4,11 +4,10 @@ import numpy as np
 from sems import SEMBase
 from data_struct import hDict
 
-
-class DSamplerObs(DataSamplerBase):
+class DSamplerObsBase(DataSamplerBase):
     def __init__(self, sem: SEMBase, nT: int, variables: list[str]):
         super().__init__(sem, nT,  variables)
-
+        
     def sample(
         self,
         initial_values: Optional[dict[str, Union[int, float]]] = None,
@@ -16,8 +15,7 @@ class DSamplerObs(DataSamplerBase):
         epsilon: Optional[dict[str, Union[np.array]]] = None,
         n_samples=1,
     ):
-        # assert not (initial_values is not None and interv_levels is not None), "Cannot have both initial values and interv_levels"
-
+        # TODO: assert not (initial_values is not None and interv_levels is not None), "Cannot have both initial values and interv_levels"
         if epsilon is None:
             epsilon = hDict(
                 variables=self.variables,
@@ -31,7 +29,7 @@ class DSamplerObs(DataSamplerBase):
 
         if interv_levels is None:
             interv_levels = hDict(variables=self.variables, nT=self.nT)
-
+            
         samples = hDict(
             variables=self.variables,
             nT=self.nT,
@@ -56,6 +54,21 @@ class DSamplerObs(DataSamplerBase):
 
         return samples
 
+class DSamplerObsBF(DSamplerObsBase):
+    def __init__(self, sem: SEMBase, variables: list[str]):
+        super().__init__(sem, 1,  variables)
+    
+    def select_value(self, sem_func, init, interv, epsilon, t, samples: hDict, n_samples):
+        return sem_func(epsilon, samples)
+
+    def sample(self, epsilon, n_samples):
+        return super().sample(initial_values = None,interv_levels = None, epsilon = epsilon, n_samples=n_samples)
+        
+
+class DSamplerObsDCBO(DSamplerObsBase):
+    def __init__(self, sem: SEMBase, nT: int, variables: list[str]):
+        super().__init__(sem, nT,  variables)
+
     def select_value(self, sem_func, init, interv, epsilon, t, samples: hDict, n_samples):
         if init is not None:
             return np.array([init] * n_samples)
@@ -63,6 +76,8 @@ class DSamplerObs(DataSamplerBase):
         if interv is not None:
             return np.array([interv] * n_samples)
 
-
         return sem_func(epsilon, t, samples)
+
+    def sample(self, initial_values, interv_levels, epsilon, n_samples):
+        return super().sample(initial_values, interv_levels, epsilon, n_samples)        
 

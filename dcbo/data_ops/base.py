@@ -12,17 +12,10 @@ class DataBase:
 
 class DatasetBase(DataBase):
 
-    def __init__(self, nT, n_samples, initial_values, interv_levels, epsilon, dataY):
+    def __init__(self, nT, n_samples, dataY):
         super().__init__(None, nT, np.array(dataY.keys()))
         self.samples = n_samples
         assert n_samples > 0, "the number of samples (n_samples) must be greater than 0"
-
-        self.dataX = {
-            'initial_values': initial_values,
-            'interv_levels': interv_levels,
-            'epsilon': epsilon,
-        }
-        self.dataY = dataY
 
         # TODO: become a sampling scheme
         # if dataX is None:
@@ -41,10 +34,6 @@ class DatasetBase(DataBase):
 
     def update_new(x, y):
         raise NotImplementedError("This method must be implemented in a subclass")
-
-    # def sample(self):
-    #     pass
-
 
 class DataSamplerBase(DataBase):
 

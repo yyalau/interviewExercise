@@ -1,6 +1,7 @@
 # from ..base import DatasetBase
 from data_struct import esDict,hDict
 import numpy as np
+
 class DatasetInv:
     # TODO: remove nT and n_samples, because they should be derived from the dataX / dataY
     def __init__(
