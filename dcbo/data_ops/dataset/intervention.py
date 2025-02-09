@@ -7,12 +7,13 @@ class DatasetInv:
     def __init__(
         self,
         nT: int,
-        exp_sets
+        exp_sets,
+        dtype = "float32",
     ):
         self.n_samples = {es: 0 for es in exp_sets}
         self.dataX = esDict(exp_sets,nT)
         self.dataY = hDict(variables = exp_sets, nT = nT)
-        
+        self.dtype = dtype
     
     def update(self, es, t, *, x, y):
         
@@ -29,7 +30,7 @@ class DatasetInv:
     
     def get(self, es, t):
         
-        return self.dataX[es][t].astype(np.float64), self.dataY[es][t].astype(np.float64)
+        return self.dataX[es][t].astype(self.dtype), self.dataY[es][t].astype(self.dtype)
     
     def __repr__(self):
         return f"DatasetInv(n_samples={self.n_samples})\n{self.dataX}\n{self.dataY}"        

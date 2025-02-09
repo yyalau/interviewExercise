@@ -20,7 +20,7 @@ class GLMTanh:
         self.A = tf.Variable(A, dtype=self.dtype, name="A",  trainable=trainable)   
         self.B = tf.Variable(B, dtype=self.dtype, name="B",  trainable=trainable)
         
-        self.__trainable_variables = [self.A, self.B] if trainable else []
+        self.trainable_variables = [self.A, self.B] if trainable else []
         self.optimizer = tf.optimizers.Adam(learning_rate=0.005, beta_1=0.9, beta_2=0.99)
                 
     def __call__(self, x):
@@ -35,16 +35,16 @@ class GLMTanh:
             y_hat = self(x)
             loss = tf.reduce_mean((y - y_hat)**2)
         
-        grads = tape.gradient(loss, self.__trainable_variables)
-        self.optimizer.apply_gradients(zip(grads, self.__trainable_variables))
+        grads = tape.gradient(loss, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(grads, self.trainable_variables))
         return loss
     
     def fit(self, x, y, n_restart=10, verbose=False):
         
-        if self.__trainable_variables == []:
-            print("Model does not require fitting (len(__trainable_variables) == 0)")
+        if self.trainable_variables == []:
+            print("Model does not require fitting (len(trainable_variables) == 0)")
             return self
-
+        
         for i in range(n_restart):
             mse = self.optimize(x, y)
             if i % 5 == 0 and verbose:

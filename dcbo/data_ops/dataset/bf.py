@@ -12,8 +12,14 @@ class DatasetBF:
         
     def update_new(self, x, y):
         # TODO: verify correctness
-        self.dataX = np.concat(self.dataX, x)
-        self.dataY = np.concat(self.dataY, y)
+        
+        if self.dataX is None and self.dataY is None:
+            self.dataX = x
+            self.dataY = y
+            return
+        
+        self.dataX = np.concatenate([self.dataX, x])
+        self.dataY = np.concatenate([self.dataY, y])
         
         if self.dtype is None:
             self.dtype = y.dtype

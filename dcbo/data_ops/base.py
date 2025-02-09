@@ -2,18 +2,19 @@ from data_struct import hDict
 import numpy as np
 
 class DataBase:
-    def __init__(self, sem, nT, variables):
+    def __init__(self, sem, nT, variables, dtype="float32"):
         assert nT > 0, "the number of time steps (nT) must be greater than 0"
 
         self.sem = sem
         self.nT = nT
         self.variables = variables
+        self.dtype = dtype
 
 
 class DatasetBase(DataBase):
 
-    def __init__(self, nT, n_samples, dataY):
-        super().__init__(None, nT, np.array(dataY.keys()))
+    def __init__(self, nT, n_samples, dataY, dtype="float32"):
+        super().__init__(None, nT, np.array(dataY.keys()), dtype)
         self.samples = n_samples
         assert n_samples > 0, "the number of samples (n_samples) must be greater than 0"
 
@@ -37,8 +38,8 @@ class DatasetBase(DataBase):
 
 class DataSamplerBase(DataBase):
 
-    def __init__(self, sem, nT, variables):
-        super().__init__(sem, nT, variables)
+    def __init__(self, sem, nT, variables, dtype="float32"):
+        super().__init__(sem, nT, variables, dtype)
 
     def sample(self):
         raise NotImplementedError("This method must be implemented in a subclass")

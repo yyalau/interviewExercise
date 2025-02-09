@@ -15,7 +15,7 @@ Gamma = tfp.math.psd_kernels.GammaExponential
 
 
 class CausalRBF:
-    def __init__(self, target_var, var_fn):
+    def __init__(self, target_var, var_fn, dtype = "float32"):
         # super().__init__(
         #     amplitude= amplitude,
         #     length_scale= length_scale,
@@ -33,6 +33,7 @@ class CausalRBF:
         self.Y = None
         self.var_fn = var_fn
         self.target_var = target_var
+        self.dtype = dtype
 
 
     def _apply(self, x1, x2, example_ndims=0):
@@ -49,17 +50,18 @@ class CausalRBF:
         return result
 
     def _matrix(self, x1, x2):
-        x1_diag = tf.cast(self.var_fn(x1)[self.target_var][0,...,None], dtype=tf.float64)
-        x2_diag = tf.cast(self.var_fn(x2)[self.target_var][0,...,None], dtype=tf.float64)
+        x1_diag = tf.cast(self.var_fn(x1)[self.target_var][0,...,None], dtype=self.dtype)
+        x2_diag = tf.cast(self.var_fn(x2)[self.target_var][0,...,None], dtype=self.dtype)
         return tf.sqrt(x1_diag) @ tf.sqrt(tf.transpose(x2_diag))
 
 
 class GaussianRBF(CausalRBF, Quadratic):
-    def __init__(self, target_var, var_fn, amplitude=1, length_scale=None, power = None, inverse_length_scale=None, feature_ndims=1):
+    def __init__(self, target_var, var_fn, amplitude=1, length_scale=None, power = None, inverse_length_scale=None, feature_ndims=1,dtype = "float32"):
         CausalRBF.__init__(
             self,
             target_var=target_var,
             var_fn=var_fn,
+            dtype = dtype,
         )
         
         Quadratic.__init__(
@@ -69,7 +71,6 @@ class GaussianRBF(CausalRBF, Quadratic):
             power=power,
             inverse_length_scale=inverse_length_scale,
             feature_ndims=feature_ndims,            
-
         )
         
     def _apply(self, x1, x2, example_ndims=0):
@@ -84,18 +85,19 @@ class GaussianRBF(CausalRBF, Quadratic):
             dist = Quadratic._matrix(self, x1, x2)
         else:
             dist = Quadratic._matrix(self, x1[...,None], x2[...,None])  
-            
+        
         adj = CausalRBF._matrix(self, x1, x2)
         result = tf.cast(adj, dist.dtype) + dist
         return result
 
 
 class GammaRBF(CausalRBF, Gamma):
-    def __init__(self, target_var, var_fn, amplitude=1, length_scale=None, power = None, inverse_length_scale=None, feature_ndims=1):
+    def __init__(self, target_var, var_fn, amplitude=1, length_scale=None, power = None, inverse_length_scale=None, feature_ndims=1, dtype = "float32"):
         CausalRBF.__init__(
             self,
             target_var=target_var,
             var_fn=var_fn,
+            dtype = dtype,
         )
         
         Gamma.__init__(
@@ -120,7 +122,7 @@ class GammaRBF(CausalRBF, Gamma):
             dist = Gamma._matrix(self, x1, x2)
         else:
             dist = Gamma._matrix(self, x1[...,None], x2[...,None])  
-            
+        
         adj = CausalRBF._matrix(self, x1, x2)
         result = tf.cast(adj, dist.dtype) + dist
         return result

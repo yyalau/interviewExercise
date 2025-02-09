@@ -18,19 +18,21 @@ class GPRegression(NLLBase):
         variance=1.0,
         lengthscale=1.0,
         noise_var=1.0,
+        dtype = "float32",
     ):
         self.X = None
         self.Y = None
         self.mean_fn = mean_fn
+        self.dtype = dtype
 
         self.amplitude = tfp.util.TransformedVariable(
-            variance, tfb.Exp(), dtype=tf.float64, name="amplitude"
+            variance, tfb.Exp(), dtype=dtype, name="amplitude"
         )
         self.length_scale = tfp.util.TransformedVariable(
-            lengthscale, tfb.Exp(), dtype=tf.float64, name="length_scale"
+            lengthscale, tfb.Exp(), dtype=dtype, name="length_scale"
         )
         self.observation_noise_variance = tfp.util.TransformedVariable(
-            noise_var, tfb.Exp(), dtype=tf.float64, name="observation_noise_variance"
+            noise_var, tfb.Exp(), dtype=dtype, name="observation_noise_variance"
         )
 
         self.kernel = kernel_fn(
@@ -39,7 +41,7 @@ class GPRegression(NLLBase):
             feature_ndims=feature_ndims,
         )
         
-        super().__init__(model = None)
+        super().__init__(model = None, feature_ndims=feature_ndims, dtype=dtype)
 
         # https://towardsdatascience.com/gaussian-process-models-7ebce1feb83d
 
@@ -97,6 +99,7 @@ class GPRegression(NLLBase):
             )
         )
 
+    @property
     def gprm(self):
         return lambda inputs: tfd.GaussianProcessRegressionModel(
             kernel=self.model.kernel,
@@ -107,7 +110,10 @@ class GPRegression(NLLBase):
         )
 
     def predict(self, x):
-        gprm_fit = self.gprm()(x[..., None])
+        if self.feature_ndims == 1 and x.ndim == 1 or self.feature_ndims > 1 and x.ndim == 2:
+            x = x[...,None]
+        
+        gprm_fit = self.gprm(x)
         return tf.reshape(gprm_fit.mean(), (x.shape[0], -1)), tf.reshape(gprm_fit.variance(), (x.shape[0], -1))
 
 

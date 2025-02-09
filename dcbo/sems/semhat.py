@@ -103,7 +103,7 @@ class SEMHat:
             assert pa_node.t == t, "Time mismatch for prior/nodes and samples."
             samp += [tf.reshape(samples[pa_node.name][pa_node.t], (n_samples, -1))]
         # 10, 3
-        return np.hstack(samp)
+        return np.hstack(samp).astype(np.float32)
 
     def get_kernel(
         self,

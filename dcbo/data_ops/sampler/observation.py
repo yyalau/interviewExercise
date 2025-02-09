@@ -5,8 +5,8 @@ from sems import SEMBase
 from data_struct import hDict
 
 class DSamplerObsBase(DataSamplerBase):
-    def __init__(self, sem: SEMBase, nT: int, variables: list[str]):
-        super().__init__(sem, nT,  variables)
+    def __init__(self, sem: SEMBase, nT: int, variables: list[str], dtype = "float32"):
+        super().__init__(sem, nT,  variables, dtype)
         
     def sample(
         self,
@@ -34,7 +34,7 @@ class DSamplerObsBase(DataSamplerBase):
             variables=self.variables,
             nT=self.nT,
             nTrials=n_samples,
-            default=lambda x, y: np.zeros((x, y)),
+            default=lambda x, y: np.zeros((x, y), dtype=self.dtype),
         )
         
 
@@ -55,19 +55,19 @@ class DSamplerObsBase(DataSamplerBase):
         return samples
 
 class DSamplerObsBF(DSamplerObsBase):
-    def __init__(self, sem: SEMBase, variables: list[str]):
-        super().__init__(sem, 1,  variables)
+    def __init__(self, sem: SEMBase, variables: list[str], dtype = "float32"):
+        super().__init__(sem, 1,  variables, dtype)
     
     def select_value(self, sem_func, init, interv, epsilon, t, samples: hDict, n_samples):
-        return sem_func(epsilon, samples)
+        return sem_func(epsilon, samples).astype(self.dtype)
 
     def sample(self, epsilon, n_samples):
         return super().sample(initial_values = None,interv_levels = None, epsilon = epsilon, n_samples=n_samples)
         
 
 class DSamplerObsDCBO(DSamplerObsBase):
-    def __init__(self, sem: SEMBase, nT: int, variables: list[str]):
-        super().__init__(sem, nT,  variables)
+    def __init__(self, sem: SEMBase, nT: int, variables: list[str], dtype = "float32"):
+        super().__init__(sem, nT,  variables, dtype)
 
     def select_value(self, sem_func, init, interv, epsilon, t, samples: hDict, n_samples):
         if init is not None:
@@ -76,7 +76,7 @@ class DSamplerObsDCBO(DSamplerObsBase):
         if interv is not None:
             return np.array([interv] * n_samples)
 
-        return sem_func(epsilon, t, samples)
+        return sem_func(epsilon, t, samples).astype(self.dtype)
 
     def sample(self, initial_values, interv_levels, epsilon, n_samples):
         return super().sample(initial_values, interv_levels, epsilon, n_samples)        

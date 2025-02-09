@@ -16,8 +16,9 @@ class DatasetObsDCBO(DatasetBase):
         interv_levels: hDict = None,
         epsilon: hDict = None,
         dataY: hDict = None,
+        dtype = "float32",
     ):
-        super().__init__(nT, n_samples, dataY)
+        super().__init__(nT, n_samples, dataY, dtype)
         
         self.dataX = {
             'initial_values': initial_values,
