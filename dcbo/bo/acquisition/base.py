@@ -30,12 +30,16 @@ class EIBase:
         return z, pdf, cdf
 
     def clipv(self, variance):
-        if tf.reduce_any(tf.math.is_nan(variance)):
-            variance[tf.isnan(variance)] = 0
+        if tf.reduce_any( nan_v := tf.math.is_nan(variance)):
+            variance = tf.where(nan_v, tf.zeros_like(variance), variance)
         elif tf.reduce_any(variance < 0):
             variance = variance.clip(0.0001)
         return variance
 
     
-    def evaluate(self, x):
-        raise NotImplementedError
+    def evaluate(self, mean, variance):
+        sd = np.sqrt(self.clipv(variance))
+        u, pdf, cdf = self.get_stats(self.cmin, mean, sd)
+        improvement = self.task * sd * (u * cdf + pdf)
+
+        return tf.reshape(improvement, -1).numpy()

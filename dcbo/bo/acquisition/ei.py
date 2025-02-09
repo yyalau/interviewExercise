@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow_probability as tfp
 gpEI = tfp.experimental.bayesopt.acquisition.GaussianProcessExpectedImprovement
 from .base import EIBase
+import tensorflow as tf
 
 class CausalEI(EIBase):
     def __init__(
@@ -24,6 +25,7 @@ class CausalEI(EIBase):
         """
         super().__init__(task, jitter)
         self.bo_model = bo_model
+        
 
     def evaluate(self, x: np.ndarray) -> np.ndarray:
         """
@@ -31,34 +33,16 @@ class CausalEI(EIBase):
 
         :param x: points where the acquisition is evaluated.
         """
-        gprm = self.bo_model.gprm()(x)
-        gpei = gpEI(predictive_distribution = gprm, 
-             observations = gprm.observations,
-             exploration = self.jitter)
+        mean, variance = self.bo_model.predict(x)        
+        self.cmin = tf.reduce_min(self.bo_model.gprm(x).observations)
+        # gpei = gpEI(predictive_distribution = gprm, 
+        #      observations = gprm.observations,
+        #      exploration = self.jitter)
         
-        improvement = gpei() # sames as gpei(x)
+        # improvement = gpei() # sames as gpei(x)
         
-        return improvement.numpy()
+        return super().evaluate(mean, variance)
 
-    # def evaluate_with_gradients(self, gp_model, gp_grad, x: np.ndarray, ):
-    #     """
-    #     Computes the Expected Improvement and its derivative.
-
-    #     :param x: locations where the evaluation with gradients is done.
-    #     """
-
-    #     dmean_dx, dvariance_dx = gp_grad
-    #     dstandard_deviation_dx = dvariance_dx / (2 * standard_deviation)
-
-    #     mean += self.jitter
-    #     u, pdf, cdf = self.stats(self.current_global_min, mean, standard_deviation)
-    #     if self.task == "min":
-    #         dimprovement_dx = dstandard_deviation_dx * pdf - cdf * dmean_dx
-    #     else:
-    #         dimprovement_dx = -(dstandard_deviation_dx * pdf - cdf * dmean_dx)
-
-    #     improvement = self.evaluate(gp_model, x)
-    #     return improvement, dimprovement_dx
 
     @property
     def has_gradients(self) -> bool:

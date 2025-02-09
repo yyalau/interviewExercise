@@ -24,6 +24,7 @@ tf.config.run_functions_eagerly(True)
 nT = 3
 variables = [Var("X"), Var("Z"), Var("Y")]
 target_variable = Var("Y")
+dtype = "float32"
 # define SEM
 sem = StationaryIndependentSEM()
 n_samples = 6
@@ -32,7 +33,7 @@ n_samples = 6
 exploration_sets = list(powerset([Var("X"), Var("Z")]))
 
 # define observation dataset
-epsilon = hDict(variables=variables, nT=nT, nTrials=n_samples, default=np.random.randn)
+epsilon = hDict(variables=variables, nT=nT, nTrials=n_samples, default=lambda x, y : np.random.randn(x,y).astype(dtype))
 initial_values = hDict(variables=variables)
 interv_levels = hDict(variables=variables, nT=nT)
 
@@ -40,6 +41,7 @@ genObsY = DSamplerObsDCBO(
     sem=sem,
     nT=nT,
     variables=variables,
+    dtype=dtype,
 )
 
 obsY = genObsY.sample(
@@ -57,6 +59,7 @@ D_O = DatasetObsDCBO(
     interv_levels=interv_levels,
     epsilon=epsilon,
     dataY=obsY,
+    dtype=dtype,
 )
 
 # define intervention domain
@@ -92,7 +95,13 @@ semhat = SEMHat(G, prior_emit, prior_trans)
 print(semhat.get_edgekeys(Node("Y", 1), 1))
 print(semhat.get_edgekeys(Node("Y", 1), 0))
 
-init_tvalue = 0
+init_tvalue = 99999
+fix_var = hDict(
+    variables=variables,
+    nT=nT,
+    nTrials=1,
+    default=lambda x, y: np.ones((x, y), dtype= dtype)*0.15,
+)
 N = 10
 outcome_values = hDict(
     variables=G.variables,
@@ -148,7 +157,7 @@ for t in range(nT):
             
             invDX[es][t, :] = temp = interv_sampler[es].sample(N)
 
-            improvements = acq.evaluate(temp.astype(np.float64)) / acq_cost.evaluate(es, temp)        
+            improvements = acq.evaluate(temp.astype(dtype)) / acq_cost.evaluate(es, temp)        
             invLogger.update(
                 t=t,
                 trial=trial,
@@ -167,7 +176,7 @@ for t in range(nT):
         
         
         # get the y value for the optimal intervention set
-        y_new = genObsY.sample(interv_levels=trial_ilvl, epsilon=static_epsilon, n_samples=1)[target_variable][t][0]  # (1x1)
+        y_new = genObsY.sample(initial_values=None, interv_levels=trial_ilvl, epsilon=static_epsilon, n_samples=1)[target_variable][t][0]  # (1x1)
         D_Inv.update(
             t=t,
             es=trial_es,
@@ -179,18 +188,18 @@ for t in range(nT):
         # update the BO model
         dataIX, dataIY = D_Inv.get(trial_es, t)
         if bo_models[trial_es][t, 0] is None:
-            # TODO: model.likelihood.variance.fix() is unsolved
-            # should be corresponding to log_prob of the GP model
-            mean_f, variance_f = surr.create(t=t, interv_levels=trial_ilvl, es=trial_es)
+            mean_f, _ = surr.create(t=t, interv_levels=trial_ilvl, es=trial_es)
             
+            # Corresponding to model.likelihood.variance.fix() 
+            fix_variance_f = lambda _ : fix_var
             bo_models[trial_es][t, 0] = BOModel(
                 es,
                 target_variable,
                 mean_f,
-                variance_f,
+                fix_variance_f,
             )
 
-        bo_models[trial_es][t, 0].fit(dataIX, dataIY.reshape(-1))
+        bo_models[trial_es][t, 0].fit(dataIX, dataIY.reshape(-1), n_restart = 100, verbose=True)
 
 
     # update opt_ilvl

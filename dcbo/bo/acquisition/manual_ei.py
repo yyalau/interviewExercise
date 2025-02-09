@@ -44,13 +44,8 @@ class ManualCausalEI(EIBase):
         """
         mean = self.mean_function(samples)[self.v_target] + self.jitter
         variance = self.variance_function(samples)[self.v_target] + self.previous_variance         
-        sd = np.sqrt(self.clipv(variance))
-
-        u, pdf, cdf = self.get_stats(self.cmin, mean, sd)
-        improvement = self.task * sd * (u * cdf + pdf)
-
-        return tf.reshape(improvement, -1).numpy()
-
+        return super().evaluate(mean, variance)
+    
     @property
     def has_gradients(self) -> bool:
         """Returns that this acquisition does not have gradients."""

@@ -7,10 +7,11 @@ from copy import deepcopy
 import tensorflow as tf
 
 class Surrogate:
-    def __init__(self, semhat):
+    def __init__(self, semhat, dtype = "float32"):
         self.sem = semhat
         self.nT = semhat.nT
         self.variables= semhat.vs
+        self.dtype = dtype
         
     def create(self, t, interv_levels, es):
         # objective: get mean_f[t, null]
@@ -30,8 +31,10 @@ class Surrogate:
             
             if es is not None:
                 for vid, var in enumerate(es):
-                    new_ilvls[var][t,:] = ilvl[:, vid]
-            
+                    try:
+                        new_ilvls[var][t,:] = ilvl[:, vid]
+                    except:
+                        import ipdb; ipdb.set_trace()
             samples = hDict(
                 variables=self.variables,
                 nT=self.nT,

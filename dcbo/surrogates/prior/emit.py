@@ -27,6 +27,7 @@ class PriorEmit(PriorBase):
         Source node operations.
         """
 
+
         funcs.add(key=(k := (None, pa_node.name)))
         funcs[k][pa_node.t, 0] = KernelDensity(kernel=tfd.Normal).fit(
             pa_value[..., None]
