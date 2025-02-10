@@ -39,7 +39,6 @@ class EIBase:
     
     def evaluate(self, mean, variance):
         sd = np.sqrt(self.clipv(variance))
-        u, pdf, cdf = self.get_stats(self.cmin, mean, sd)
+        u, pdf, cdf = self.get_stats(self.cmin if self.cmin is not None else mean, mean, sd) 
         improvement = self.task * sd * (u * cdf + pdf)
-
         return tf.reshape(improvement, -1).numpy()

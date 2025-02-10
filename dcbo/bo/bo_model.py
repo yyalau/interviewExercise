@@ -11,6 +11,7 @@ class BOModel(GPRegression):
         target_var,
         mean_f,
         variance_f,
+        nll_variance_f = None,
         variance=1.0,
         lengthscale=1.0,
         noise_var=1.0,

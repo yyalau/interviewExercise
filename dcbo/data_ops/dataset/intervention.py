@@ -3,34 +3,37 @@ from data_struct import esDict,hDict
 import numpy as np
 
 class DatasetInv:
-    # TODO: remove nT and n_samples, because they should be derived from the dataX / dataY
+    # TODO: remove nT and n_samples, because they should be derived from the self.dataX[es][t] / self.dataY[es][t]
     def __init__(
         self,
-        nT: int,
         exp_sets,
+        nT,
+        nTrials,
         dtype = "float32",
     ):
-        self.n_samples = {es: 0 for es in exp_sets}
-        self.dataX = esDict(exp_sets,nT)
-        self.dataY = hDict(variables = exp_sets, nT = nT)
+        self.n_samples = hDict(variables = exp_sets, nT = nT, nTrials = 1, default = lambda x,y : np.zeros((x,y), dtype = "int"), dtype = dtype)
+        
+        self.dataX = esDict(exp_sets, nT = nT, nTrials = nTrials, dtype = dtype)
+        self.dataY = hDict(variables = exp_sets, nT = nT, nTrials = nTrials, dtype = dtype)
         self.dtype = dtype
     
     def update(self, es, t, *, x, y):
+        '''
+        x = trial_lvl = array([-2.294363021850586], dtype=object)
+        y = y_new = -1.2014532
+        '''
         
-        dataX = self.dataX[es][t]; dataY = self.dataY[es][t]
-        if self.n_samples[es] == 0:
-            dataX[0] = x
-            dataY[0] = y
-        else:  
-            f = lambda old, new: np.vstack([old, new])
-            dataX = f(dataX, x) 
-            dataY = f(dataY, y)
-            
-        self.n_samples[es] += 1
+        idx = self.n_samples[es][t, 0]
+        self.dataX[es][t, idx] = x
+        self.dataY[es][t, idx] = y
+                
+        
+        self.n_samples[es][t] += 1
     
     def get(self, es, t):
         
-        return self.dataX[es][t].astype(self.dtype), self.dataY[es][t].astype(self.dtype)
+        idx = self.n_samples[es][t,0]
+        return self.dataX[es][t, :idx].astype(self.dtype), self.dataY[es][t, :idx].astype(self.dtype)
     
     def __repr__(self):
         return f"DatasetInv(n_samples={self.n_samples})\n{self.dataX}\n{self.dataY}"        

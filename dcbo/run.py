@@ -95,14 +95,14 @@ semhat = SEMHat(G, prior_emit, prior_trans)
 print(semhat.get_edgekeys(Node("Y", 1), 1))
 print(semhat.get_edgekeys(Node("Y", 1), 0))
 
-init_tvalue = 99999
+init_tvalue = None
 fix_var = hDict(
     variables=variables,
     nT=nT,
     nTrials=1,
     default=lambda x, y: np.ones((x, y), dtype= dtype)*0.15,
 )
-N = 10
+N = 5
 outcome_values = hDict(
     variables=G.variables,
     nT=nT,
@@ -110,7 +110,7 @@ outcome_values = hDict(
 )
 
 surr = Surrogate(semhat)
-D_Inv = DatasetInv(nT=nT, exp_sets=exploration_sets)
+D_Inv = DatasetInv(exp_sets=exploration_sets, nT = nT, nTrials = N)
 
 
 # stores interventional data levels
@@ -137,7 +137,8 @@ static_epsilon = hDict(
 acq_cost = FixedCost(variables, 1)
 
 for t in range(nT):
-
+    
+    
     for trial in range(N):
 
         for es in exploration_sets:
@@ -148,7 +149,7 @@ for t in range(nT):
                     target_variable,
                     mean_f,
                     variance_f,
-                    init_tvalue,
+                    cmin = init_tvalue,
                 )
             else:
                 acq = CausalEI(
@@ -184,11 +185,11 @@ for t in range(nT):
             y=y_new,
         )
         invLogger.update_y(t, trial, trial_es, y_new)
-
+        
         # update the BO model
         dataIX, dataIY = D_Inv.get(trial_es, t)
         if bo_models[trial_es][t, 0] is None:
-            mean_f, _ = surr.create(t=t, interv_levels=trial_ilvl, es=trial_es)
+            mean_f, variance_f = surr.create(t=t, interv_levels=trial_ilvl, es=trial_es)
             
             # Corresponding to model.likelihood.variance.fix() 
             fix_variance_f = lambda _ : fix_var
@@ -196,12 +197,12 @@ for t in range(nT):
                 es,
                 target_variable,
                 mean_f,
+                variance_f,
                 fix_variance_f,
             )
 
-        bo_models[trial_es][t, 0].fit(dataIX, dataIY.reshape(-1), n_restart = 100, verbose=True)
-
-
+        bo_models[trial_es][t, 0].fit(dataIX, dataIY.reshape(-1), n_restart = 10, verbose=False)
+    
     # update opt_ilvl
     _, best_es, best_lvl, _ = invLogger.sol[t]
     for vid, var in enumerate(best_es):
