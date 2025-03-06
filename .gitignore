@@ -3,3 +3,7 @@ old/
 test_kernel.py
 *.pyc
 src/backup
+.pytest_cache
+.vscode
+results
+backup
