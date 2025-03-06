@@ -13,9 +13,9 @@ Topic: **[Question 3]** Dynamic causal Bayesian optimization and optimal interve
     1. Questions (Part 1)
     1. Testing Plans
 
-- Code base for [DCBO](./dcbo)
+- Code base for [DCBO](./src)
     - written in Python 3.9, TensorFlow 2.18.0
     - main file to run
         ```bash 
-        python dcbo/run.py
+        python src/run_dcbo.py
         ```

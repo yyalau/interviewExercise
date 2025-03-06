@@ -2,3 +2,4 @@ examples/
 old/
 test_kernel.py
 *.pyc
+src/backup
