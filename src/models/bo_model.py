@@ -18,6 +18,7 @@ class BOModel(GPRegression):
         alpha=2,
         beta=0.5,
         use_gamma_prior=True,
+        dtype="float32",
     ):
         self.es = es
         self.target_var = target_var
@@ -45,4 +46,5 @@ class BOModel(GPRegression):
             variance=variance,
             lengthscale=lengthscale,
             noise_var=noise_var,
+            dtype = dtype,
         )

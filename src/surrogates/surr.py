@@ -32,7 +32,7 @@ class Surrogate:
                     nT=self.nT,
                     nTrials=n_samples,
                     default=lambda nT, nTrials: tf.convert_to_tensor(
-                        [[np.nan] * nTrials] * nT
+                        [[np.nan] * nTrials] * nT, dtype=self.dtype,
                     ),
                 )
             else:
@@ -44,7 +44,7 @@ class Surrogate:
                     # new_ilvls[var] = eager_replace(new_ilvls[var], ilvl[:, vid], t, axis=0, dtype=self.dtype)
                     new_ilvls[var] = tf.stack(
                         [
-                            tf.convert_to_tensor(new_ilvls[var][tempt]) if tempt != t else ilvl[:, vid]
+                            tf.convert_to_tensor(new_ilvls[var][tempt], dtype = self.dtype) if tempt != t else ilvl[:, vid]
                             for tempt in range(self.nT)
                         ],
                         axis=0,
@@ -55,7 +55,7 @@ class Surrogate:
                 variables=self.variables,
                 nT=self.nT,
                 nTrials=n_samples,
-                default=lambda x, y: tf.convert_to_tensor([[0.] * y] * x),
+                default=lambda x, y, _: tf.convert_to_tensor([[0.] * y] * x, dtype = self.dtype),
                 dtype=self.dtype,
             )
 
@@ -80,7 +80,7 @@ class Surrogate:
                 variables=self.variables,
                 nT=1,
                 nTrials=n_samples,
-                default=lambda x, y: None,
+                default=lambda x, y, _: None,
             )
 
             for var in self.variables:

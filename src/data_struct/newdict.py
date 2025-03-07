@@ -51,7 +51,7 @@ class newDict(OrderedDict):
         if self.get(key) is not None:
             return
 
-        self[key] = self.default(self.nT, self.nTrials)
+        self[key] = self.default(self.nT, self.nTrials, self.dtype)
 
     def duplicate(self, nTrials: int) -> None:
         '''
@@ -101,10 +101,10 @@ class hDict(newDict):
         self.default = (
             default
             if default is not None
-            else (lambda nT, nTrials: np.array([[None] * nTrials] * nT))
+            else (lambda nT, nTrials, dtype: np.array([[None] * nTrials] * nT))
         )
 
-        super().__init__(arr = [(es, self.default(nT, nTrials)) for es in variables] if arr is None else arr, dtype=dtype)
+        super().__init__(arr = [(es, self.default(nT, nTrials, dtype)) for es in variables] if arr is None else arr, dtype=dtype)
 
 
 class esDict(newDict):
@@ -126,7 +126,7 @@ class esDict(newDict):
         self.nT = 1
         self.nTrials = 1
 
-        self.default = lambda nT, nTrials, es_l: np.array(
+        self.default = lambda nT, nTrials, es_l, dtype: np.array(
             [[[None] * es_l] * nTrials] * nT
         )
-        super().__init__(arr = [(es, self.default(nT, nTrials, len(es))) for es in exp_sets], dtype=dtype)
+        super().__init__(arr = [(es, self.default(nT, nTrials, len(es), dtype)) for es in exp_sets], )

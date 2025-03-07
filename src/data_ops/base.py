@@ -50,7 +50,7 @@ class DataSamplerBase:
             
         assert isinstance(sem, SEMBase), "sem must be an instance of SEMBase"
         assert nT > 0 and isinstance(nT, int), "the number of timesteps (n_samples) must be an integer greater than 0"
-
+        assert dtype in ['float32', 'float64'], "dtype must be one of 'float32' or 'float64"
         self.sem = sem
         self.nT = nT
         self.variables = variables

@@ -1,5 +1,5 @@
 import os
-from typing import List, Union
+from typing import List, Union, Tuple
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import tensorflow as tf
@@ -50,9 +50,10 @@ class HypothesisTesting:
         self.n_pdc = n_pdc
         self.m_obs_0 = m_obs_0      
         self.m_obs_1 = m_obs_1
-        self.genObsY, self.D_Obs = self.obs(sem, variables, dO_eps.nTrials, dO_eps)
+        self.genObsY, self.D_Obs = self.obs(sem, variables, varX, varY, dO_eps, dtype)
         self.D_Int = DatasetBF(dtype=dtype)
         self.criterion = criterion
+        self.dtype = dtype
 
     def sanity_check(self, sem, variables, varX, varY, n_pdc, dO_eps, criterion, m_obs_0, m_obs_1, dtype):
 
@@ -75,7 +76,7 @@ class HypothesisTesting:
         assert varX != varY, "varX must not be equal to varY"
         assert set([v.name for v in variables]) == set(sem.static().keys()), "variables must be the same as the variables in sem"
         
-    def obs(self, sem: SEMBase, variables: List[Var], n_obs: int, epsilon: hDict) -> (DSamplerObsBF, DatasetBF):
+    def obs(self, sem: SEMBase, variables: List[Var], varX: Var, varY: Var, epsilon: hDict, dtype: str) -> Tuple[DSamplerObsBF, DatasetBF]:
         '''
         Generates the observed data.
         Parameters:
@@ -88,6 +89,8 @@ class HypothesisTesting:
             Number of observations to generate.
         epsilon : hDict
             The noise for the observed data.
+        dtype : str
+            The data type of the values. One of "float32" or "float64".
         Returns:
         --------
         genObsY : DSamplerObsBF
@@ -98,7 +101,7 @@ class HypothesisTesting:
         
         genObsY = DSamplerObsBF(sem=sem, variables=variables, dtype=dtype)
 
-        obsY = genObsY.sample(epsilon=epsilon, n_samples=n_obs)
+        obsY = genObsY.sample(epsilon=epsilon, n_samples=epsilon.nTrials)
         D_Obs = DatasetBF(
             dataX=epsilon[varX][0].reshape(-1, 1),
             dataY=obsY[varY][0].reshape(-1, 1),
@@ -130,7 +133,7 @@ class HypothesisTesting:
 
         # Calculate the prior probability of H0
         prior_H0 = get_probH0(
-            self.D_Obs.dataX, self.D_Obs.dataY, self.m_obs_0, self.m_obs_1, dtype=dtype
+            self.D_Obs.dataX, self.D_Obs.dataY, self.m_obs_0, self.m_obs_1, dtype=self.dtype
         )
         posterior_H0 = 0.5  # Initialize the posterior probability of H0
         print("P(H_0) = ", prior_H0, "; P(H_1) = ", 1 - prior_H0)
@@ -153,16 +156,17 @@ class HypothesisTesting:
                 variables=self.variables,
                 nT=1,
                 nTrials=1,
-                default=lambda x, y: np.zeros((x, y)).astype(dtype),
+                default=lambda x, y, _: np.zeros((x, y)).astype(self.dtype),
+                dtype = dtype
             )
-            temp[varX] = x_opt  # Set the intervention value for varX
-            temp[varY] = np.zeros((1, 1))  # Initialize varY with zeros
+            temp[self.varX] = x_opt  # Set the intervention value for varX
+            temp[self.varY] = np.zeros((1, 1))  # Initialize varY with zeros
 
             # Sample new data based on the intervention
             y_new = self.genObsY.sample(epsilon=temp, n_samples=1)
 
             # Update the intervention dataset with the new sample
-            self.D_Int.update(y_new[varX], y_new[varY])
+            self.D_Int.update(y_new[self.varX], y_new[self.varY])
             # Update the posterior probability of H0
             posterior_H0 = update_posteriorH0(
                 self.D_Int, self.m_obs_0, self.m_obs_1, prior_H0
@@ -236,7 +240,8 @@ if __name__ == "__main__":
                 variables=testcase['variables'],
                 nT=1,
                 nTrials=n_obs,
-                default=lambda x, y: np.random.randn(x, y).astype(dtype),
+                default=lambda x, y, dtype: np.random.randn(x, y).astype(dtype),
+                dtype = dtype
             )
 
             # Define the models for the observed data under H0 and H1

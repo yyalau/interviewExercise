@@ -18,7 +18,7 @@ from data_struct import Node, Var
 
 
 def get_generic_graph(
-    start_time: int,
+    # start_time: int,
     stop_time: int,
     topology: str,
     nodes: List[str],
@@ -32,21 +32,21 @@ def get_generic_graph(
     spatial_edges = []
 
     if topology == "independent": 
-        for t in range(start_time, stop_time):
+        for t in range(stop_time):
             spatial_edges.extend([f"{node}_{t} -> {target_node}_{t};" for node in nodes if node != target_node])
 
     elif topology == "dependent":
-        for t in range(start_time, stop_time):
+        for t in range(stop_time):
             spatial_edges.extend([f"{node1}_{t} -> {node2}_{t};" for node1, node2 in zip(nodes[:-1], nodes[1:])])            
     else:
         raise ValueError("Topology not recognized")    
     
     ranking = "".join(["{{ rank=same; {} }} ".format(
                 " ".join(["{}_{}".format(node, t) for node in nodes])
-            ) for t in range(start_time, stop_time) ])
+            ) for t in range(stop_time) ])
 
     spatial_edges = "".join(spatial_edges)    
-    temporal_edges = "".join([ f"{node}_{t} -> {node}_{t+1};" for t in range(start_time, stop_time - 1) for node in nodes ])
+    temporal_edges = "".join([ f"{node}_{t} -> {node}_{t+1};" for t in range(stop_time - 1) for node in nodes ])
     graph = "digraph {{ rankdir=LR; {} {} {} }}".format(
         spatial_edges, temporal_edges, ranking
     )
@@ -79,7 +79,6 @@ def vis_graph(graph: str, filename: str) -> None:
 if __name__ == "__main__":
     nT = 4
     G = get_generic_graph(
-        start_time=0,
         stop_time=nT,
         topology="dependent",
         nodes=[Var("X"), Var("Z"), Var("Y"), Var("W")],

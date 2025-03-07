@@ -34,7 +34,6 @@ class CausalRBF:
         self.Y = None
         self.var_fn = var_fn
         self.target_var = target_var
-        # self.dtypec = dtype
         
     def _apply(self, x1, x2, example_ndims=0):
         # import ipdb; ipdb.set_trace()

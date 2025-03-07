@@ -5,10 +5,11 @@ import numpy as np
 
 
 class KernelDensity:
-    def __init__(self, kernel, n_bins =100, bandwidth=1.0):        
+    def __init__(self, kernel, n_bins =100, bandwidth=1.0, dtype = "float32"):        
         self.kernel = kernel
         self.n_bins = n_bins
         self.bandwidth = bandwidth
+        self.dtype = dtype 
         
     
     def _set_bandwidth(self, x):    
@@ -29,7 +30,7 @@ class KernelDensity:
         
         
         # https://astroviking.github.io/ba-thesis/tensorflowImplementation.html
-        probs = tf.ones(x.shape[0], dtype = x.dtype) / x.shape[0]
+        probs = tf.ones(x.shape[0], dtype = self.dtype) / x.shape[0]
         f = lambda x: tfd.Independent(self.kernel(loc=x, scale=self.bandwidth_))         
         
         self.kde = tfd.MixtureSameFamily(

@@ -6,8 +6,8 @@ from models import GPRegression
 
 
 class PriorTrans(PriorBase):
-    def __init__(self, G):
-        super().__init__(G)
+    def __init__(self, G, dtype):
+        super().__init__(G, dtype)
 
     def fork_ops(self, pa_node, pa_value, ch_node, ch_value, i, funcs):
         """
@@ -17,7 +17,7 @@ class PriorTrans(PriorBase):
         if pa_node.t != ch_node.t:
             funcs.add(key=(k := (pa_node.name, i, ch_node.name)))
             funcs[k][ch_node.t, 0] = GPRegression(
-                kernel_fn=self.K_func, feature_ndims=1
+                kernel_fn=self.K_func, feature_ndims=1, dtype=self.dtype
             ).fit(x=pa_value, y=ch_value)
 
         return funcs
@@ -36,9 +36,9 @@ class PriorTrans(PriorBase):
         assert pa_node.t != ch_node.t, "Time should be different for transition nodes."
 
         funcs.add(key=(k := (pa_node.name,)))
-        funcs[k][pa_node.t, 0] = GPRegression(kernel_fn=self.K_func, feature_ndims=1).fit(
-            x=pa_value[..., None], y=ch_value
-        )
+        funcs[k][pa_node.t, 0] = GPRegression(
+            kernel_fn=self.K_func, feature_ndims=1, dtype=self.dtype
+        ).fit(x=pa_value[..., None], y=ch_value)
 
         return funcs
 
@@ -50,7 +50,7 @@ class PriorTrans(PriorBase):
         if pa_nodes[0].t != ch_node.t:
             funcs.add(key=(k := tuple(pa_node.name for pa_node in pa_nodes)))
             funcs[k][pa_nodes[0].t, 0] = GPRegression(
-                kernel_fn=self.K_func, feature_ndims=len(pa_nodes)
+                kernel_fn=self.K_func, feature_ndims=len(pa_nodes), dtype=self.dtype
             ).fit(x=pa_values[..., None], y=ch_value)
 
         return funcs

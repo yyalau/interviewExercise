@@ -6,8 +6,8 @@ from tensorflow_probability import distributions as tfd
 
 
 class PriorEmit(PriorBase):
-    def __init__(self, G):
-        super().__init__(G)
+    def __init__(self, G, dtype = "float32"):
+        super().__init__(G, dtype)
 
     def fork_ops(self, pa_node, pa_value, ch_node, ch_value, i, funcs):
         """
@@ -16,7 +16,7 @@ class PriorEmit(PriorBase):
         if pa_node.t == ch_node.t:
             funcs.add(key=(k := (pa_node.name, i, ch_node.name)))
             funcs[k][pa_node.t, 0] = GPRegression(
-                kernel=self.K_func, feature_ndims=1
+                kernel=self.K_func, feature_ndims=1, dtype = self.dtype
             ).fit(x=pa_value, y=ch_value)
 
         return funcs
@@ -26,7 +26,7 @@ class PriorEmit(PriorBase):
         Source node operations.
         """
         funcs.add(key=(k := (None, pa_node.name)))
-        funcs[k][pa_node.t, 0] = KernelDensity(kernel=tfd.Normal).fit(
+        funcs[k][pa_node.t, 0] = KernelDensity(kernel=tfd.Normal, dtype = self.dtype).fit(
             pa_value[..., None]
         )
 
@@ -38,7 +38,7 @@ class PriorEmit(PriorBase):
         """
         assert pa_node.t == ch_node.t, "Time mismatch for emission nodes."
         funcs.add(key=(k := (pa_node.name,)))
-        funcs[k][pa_node.t, 0] = GPRegression(kernel_fn=self.K_func, feature_ndims=1).fit(
+        funcs[k][pa_node.t, 0] = GPRegression(kernel_fn=self.K_func, feature_ndims=1, dtype = self.dtype).fit(
             x=pa_value[..., None], y=ch_value
         )
         return funcs
@@ -50,7 +50,7 @@ class PriorEmit(PriorBase):
         if pa_nodes[0].t == ch_node.t:
             funcs.add(key=(k := tuple(pa_node.name for pa_node in pa_nodes)))
             funcs[k][pa_nodes[0].t, 0] = GPRegression(
-                kernel_fn=self.K_func, feature_ndims=len(pa_nodes)
+                kernel_fn=self.K_func, feature_ndims=len(pa_nodes), dtype = self.dtype
             ).fit(x=pa_values[..., None], y=ch_value)
 
         return funcs

@@ -12,7 +12,7 @@ from utils.tools import powerset, eager_replace
 from utils.grids import get_interv_sampler, get_i_grids
 from data_struct import hDict, Var, GraphObj, Node, esDict, IntervLog
 from data_ops import DatasetObsDCBO, DSamplerObsDCBO, DatasetInv
-from surrogates import PriorEmit, PriorTrans, Surrogate
+from surrogates import PriorEmit, PriorTrans, Surrogate, PriorBase
 from bo import ManualCausalEI, CausalEI
 from bo import FixedCost
 from models import BOModel
@@ -110,8 +110,8 @@ class DCBO:
 
         # Initialize intervention logger and datasets
         self.invLogger = IntervLog(exp_sets=exp_sets, nT=self.nT, nTrials=nTrials)
-        self.invDX = esDict(exp_sets=exp_sets, nT=self.nT, nTrials=n_samples)
-        self.D_Inv = DatasetInv(exp_sets=exp_sets, nT=self.nT, nTrials=nTrials)
+        self.invDX = esDict(exp_sets=exp_sets, nT=self.nT, nTrials=n_samples, dtype=dtype)
+        self.D_Inv = DatasetInv(exp_sets=exp_sets, nT=self.nT, nTrials=nTrials, dtype=dtype)
         self.dtype = dtype
 
     def sanity_check(
@@ -298,7 +298,7 @@ class DCBO:
 
         return result
 
-    def get_surr(self, G: GraphObj, datasetO: DatasetObsDCBO) -> Surrogate:
+    def get_surr(self, G: GraphObj, datasetO: DatasetObsDCBO, dtype: str) -> Surrogate:
         """
         Get surrogate model based on the graph and observational dataset.
         
@@ -315,15 +315,15 @@ class DCBO:
             Surrogate for generating mean and variance function for bayesian optimization.
         """
 
-        def fitted_prior(prior: Any, G: GraphObj, dataY: Any) -> Any:
-            p = prior(G)
+        def fitted_prior(prior: PriorBase, G: GraphObj, dataY: np.ndarray) -> Any:
+            p = prior(G, dtype=dtype)   
             p.fit(dataY)
             return p
 
         prior_emit = fitted_prior(PriorEmit, G, datasetO.dataY)
         prior_trans = fitted_prior(PriorTrans, G, datasetO.dataY)
 
-        return Surrogate(SEMHat(self.G, prior_emit, prior_trans))
+        return Surrogate(SEMHat(self.G, prior_emit, prior_trans, dtype=dtype), dtype=dtype)
 
     def sc_run(self,acq_cost, init_tvalue):
         if init_tvalue is not None:
@@ -352,14 +352,15 @@ class DCBO:
         """
         
         self.sc_run(acq_cost, init_tvalue)
-        self.surr = self.get_surr(self.G, self.datasetO)
+        self.surr = self.get_surr(self.G, self.datasetO, self.dtype)
 
         # Initialize optimal intervention levels
         opt_ilvl = hDict(
             variables=self.variables,
             nT=self.nT,
             nTrials=1,
-            default=lambda x, y: np.array([[np.nan] * y] * x, dtype=self.dtype),
+            default=lambda x, y, _: np.array([[np.nan] * y] * x, dtype=self.dtype),
+            dtype = self.dtype
         )
 
         # Initialize trial intervention levels
@@ -453,6 +454,7 @@ class DCBO:
                         self.target_variable,
                         mean_f,
                         variance_f,
+                        dtype = self.dtype,
                     )
 
                 # Fit the BO model with new data
@@ -477,7 +479,7 @@ if __name__ == "__main__":
     nTrials = 10
     n_samples = 25
     n_obs = 100
-    dtype = "float32"
+    dtype = "float64"
     nT = 3
 
     # Define the variables and target variable
@@ -546,7 +548,6 @@ if __name__ == "__main__":
 
         # Create the graph object
         dag = get_generic_graph(
-            start_time=0,
             stop_time=nT,
             topology=testcase["topology"],
             nodes=variables,

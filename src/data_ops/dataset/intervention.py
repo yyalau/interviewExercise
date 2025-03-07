@@ -35,8 +35,8 @@ class DatasetInv(DatasetBase):
             variables=exp_sets,
             nT=nT,  
             nTrials=1,
-            default=lambda x, y: np.zeros((x, y), dtype="int"),
-            dtype=dtype,
+            default=lambda x, y, _: np.zeros((x, y), dtype="int"),
+            dtype="int",
         )
 
         self.dataX = esDict(exp_sets, nT=nT, nTrials=nTrials, dtype=dtype)
@@ -68,8 +68,8 @@ class DatasetInv(DatasetBase):
     def get_tf(self, es: Tuple, t: int) -> Tuple[tf.Tensor, tf.Tensor]:
 
         idx = self.n_samples[es][t, 0]
-        x = tf.convert_to_tensor(self.dataX[es][t, :idx].astype(self.dtype))
-        y = tf.reshape(tf.convert_to_tensor(self.dataY[es][t, :idx].astype(self.dtype)), (-1,))
+        x = tf.convert_to_tensor(self.dataX[es][t, :idx], dtype = self.dtype)
+        y = tf.reshape(tf.convert_to_tensor(self.dataY[es][t, :idx], dtype = self.dtype), (-1,))
         return x,y
 
     def __repr__(self):

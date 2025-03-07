@@ -6,11 +6,12 @@ import tensorflow_probability as tfp
 RBF = tfp.math.psd_kernels.ExponentiatedQuadratic
 
 class PriorBase:
-    def __init__(self, G):
+    def __init__(self, G, dtype="float32"):
         self.G = G
         self.nT = G.nT        
         self.nVar = G.nVar
         self.nodes = G.nodes
+        self.dtype = dtype
         
         self.f = hDict(
             variables=[],
