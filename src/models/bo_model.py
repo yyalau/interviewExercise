@@ -1,4 +1,4 @@
-from models import GPRegression, GaussianRBF, GammaRBF
+from . import GPRegression, GaussianRBF, GammaRBF
 import tensorflow_probability as tfp
 
 tfd = tfp.distributions

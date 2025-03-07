@@ -12,8 +12,9 @@ from utils.grids import get_interv_sampler, get_i_grids
 from data_struct import hDict, Var, GraphObj, Node, esDict, IntervLog
 from data_ops import DatasetObsDCBO, DSamplerObsDCBO, DatasetInv
 from surrogates import PriorEmit, PriorTrans, Surrogate
-from bo import ManualCausalEI, CausalEI, BOModel
+from bo import ManualCausalEI, CausalEI
 from bo import FixedCost
+from models import BOModel
 from copy import deepcopy
 import tensorflow as tf
 from utils.plots import save_result
@@ -261,8 +262,8 @@ class DCBO:
 
 
 if __name__ == "__main__":
-    nTrials = 10
-    n_samples = 25
+    nTrials = 2
+    n_samples = 1
     dtype = "float32"
     nT = 3
     variables = [Var("X"), Var("Z"), Var("Y")]

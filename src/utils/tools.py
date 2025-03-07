@@ -2,6 +2,7 @@ from itertools import chain, combinations
 from data_struct import Node, Var
 import tensorflow as tf
 import numpy as np
+
 def powerset(iterable):
     # this returns e.g. powerset([1,2,3]) --> (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)
     s = list(iterable)

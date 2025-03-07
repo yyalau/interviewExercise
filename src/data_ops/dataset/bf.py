@@ -3,7 +3,17 @@ from typing import Optional
 
 class DatasetBF:
     def __init__(self, dataX: Optional[np.array] = None, dataY: Optional[np.array]=None, dtype: str="float32") ->None:
-
+        '''
+        Initializes the DatasetBF object with the given data.
+        Parameters:
+        -----------
+        dataX : Optional[np.array]
+            The input data.
+        dataY : Optional[np.array]
+            The output data.
+        dtype : str
+            The data type.
+        '''
         self.sc(dataX, dataY)
 
         self.dataX = dataX
@@ -11,6 +21,27 @@ class DatasetBF:
         self.n_samples = dataX.shape[0] if dataX is not None else None
         self.dtype = dtype
         
+    def update(self, x: np.array, y: np.array) ->None:
+        
+        '''
+        Updates the dataset with the given data.
+        Parameters:
+        -----------
+        x : np.array
+            The input data.
+        y : np.array
+            The output data.
+        '''
+        self.sc_update(x, y)
+        
+        if self.dataX is None and self.dataY is None:
+            self.dataX = x
+            self.dataY = y
+            return
+        
+        self.dataX = np.concatenate([self.dataX, x])
+        self.dataY = np.concatenate([self.dataY, y])        
+
     def sc(self, dataX, dataY):
         
         if dataX is None and dataY is None:
@@ -30,14 +61,3 @@ class DatasetBF:
         if self.dataX is None and self.dataY is None: return
         assert x.shape[1] == self.dataX.shape[1], "x and dataX must have the same number of features"
         assert y.shape[1] == self.dataY.shape[1], "y and dataY must have the same number of features"
-        
-    def update(self, x: np.array, y: np.array) ->None:
-        self.sc_update(x, y)
-        
-        if self.dataX is None and self.dataY is None:
-            self.dataX = x
-            self.dataY = y
-            return
-        
-        self.dataX = np.concatenate([self.dataX, x])
-        self.dataY = np.concatenate([self.dataY, y])        

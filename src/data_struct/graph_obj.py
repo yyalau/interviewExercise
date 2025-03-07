@@ -1,10 +1,23 @@
+from typing import List, Any
 from .node import Node, Var
 import numpy as np
 from networkx.algorithms.dag import topological_sort
-
+from networkx import DiGraph
 
 class GraphObj:
-    def __init__(self, graph, nT, target_var):
+    def __init__(self, graph: DiGraph, nT: int, target_var: Var) -> None:
+        '''
+        Initializes the GraphObj object with the given graph, number of time steps, and target variable.
+            
+        Parameters:
+        -----------
+        graph : DiGraph
+            The directed acyclic graph.
+        nT : int
+            The number of time steps.
+        target_var : Var
+            The target variable.
+        '''
         self.dag = graph
         self.nT = nT
         self.target_variable = target_var
@@ -25,5 +38,5 @@ class GraphObj:
         uvars.append(target_var)
         self.variables = np.array(uvars)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Graph Object: {self.dag} \nnT: {self.nT} \nnVar: {self.nVar} \nnodes: {self.nodes} \nvariables: {self.variables}"

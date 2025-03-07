@@ -3,3 +3,4 @@ from .causalrbf import CausalRBF, GaussianRBF, GammaRBF
 from .kde import KernelDensity
 from .mog import MoG
 from .glm import GLMTanh
+from .bo_model import BOModel

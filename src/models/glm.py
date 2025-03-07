@@ -8,10 +8,6 @@ tfd = tfp.distributions
 import numpy as np
 
 class GLMTanh:
-    '''
-    TODO: more customizable
-    how to modify, such that the number of parameters can be customizable with input string "Ag(Bx) + C"?   
-    '''
     def __init__(self, dtype = "float32", A = 1., B = 1., trainable = True):
         self.dtype = dtype
         
@@ -26,8 +22,6 @@ class GLMTanh:
     def __call__(self, x):
         return self.A*self.g(self.B * x)
     
-    # def reverse(self, y):
-    #     return tf.math.atanh(y / self.A) / self.B
     
     @tf.function
     def optimize(self, x, y):

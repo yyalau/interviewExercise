@@ -4,12 +4,13 @@ import tensorflow_probability as tfp
 gpEI = tfp.experimental.bayesopt.acquisition.GaussianProcessExpectedImprovement
 from .base import EIBase
 import tensorflow as tf
+from models import BOModel
 
 class CausalEI(EIBase):
     def __init__(
         self,
-        bo_model,
-        task = "min",
+        bo_model: BOModel,
+        task: str = "min",
         jitter: float = 0.0,
     ) -> None:
         """
@@ -19,33 +20,41 @@ class CausalEI(EIBase):
         Efficient Global Optimization of Expensive Black-Box Functions
         Jones, Donald R. and Schonlau, Matthias and Welch, William J.
         Journal of Global Optimization
+        
+        Parameters:
+        -----------
+        bo_model : BOModel
+            The Bayesian optimization model.
+        task : str
+            Indicates whether the task is minimization ("min") or maximization ("max").
+        jitter : float
+            A small value to add to the variance to avoid numerical issues.
 
-        :param model: model that is used to compute the improvement.
-        :param jitter: parameter to encourage extra exploration.
         """
         super().__init__(task, jitter)
         self.bo_model = bo_model
         
 
-    def evaluate(self, x: np.ndarray) -> np.ndarray:
-        """
-        Computes the Expected Improvement.
+    def evaluate(self, x: np.ndarray) -> np.array:
+        '''
+        Computes the Expected Improvement (EI) at the given points.
+        This method evaluates the acquisition function at the specified points
+        by predicting the mean and variance using the Bayesian optimization model,
+        and then calculating the expected improvement.
 
-        :param x: points where the acquisition is evaluated.
-        """
+        Parameters:
+        -----------
+        x : np.ndarray
+            Points where the acquisition function is evaluated.
+        
+        Returns:
+        --------
+        np.array
+            The expected improvement values at the given points.    
+        '''
         mean, variance = self.bo_model.predict(x)        
         self.cmin = tf.reduce_min(self.bo_model.Y)
-        # gpei = gpEI(predictive_distribution = gprm, 
-        #      observations = gprm.observations,
-        #      exploration = self.jitter)
-        
-        # improvement = gpei() # sames as gpei(x)
         
         return super().evaluate(mean, variance)
 
 
-    @property
-    def has_gradients(self) -> bool:
-        """Returns that this acquisition has gradients."""
-        # return isinstance(self.model, IDifferentiable)
-        raise AttributeError("should not be implicitly called")

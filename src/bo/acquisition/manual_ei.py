@@ -1,20 +1,19 @@
 import numpy as np
 from .base import EIBase
 import tensorflow as tf
+from typing import Callable, Optional
 
-# from emukit.core.acquisition import Acquisition
-# from emukit.core.interfaces import IDifferentiable, IModel
 
 
 class ManualCausalEI(EIBase):
     def __init__(
         self,
-        v_target,
-        mean_function,
-        variance_function,
-        previous_variance = 1,
-        task = "min",
-        cmin = None,
+        v_target: float,
+        mean_function: Callable[[np.ndarray], tf.Tensor],
+        variance_function: Callable[[np.ndarray], tf.Tensor],
+        previous_variance: float = 1.0,
+        task: str = "min",
+        cmin: Optional[float] = None,
         jitter: float = 0.0,
     ) -> None:
         """
@@ -23,11 +22,25 @@ class ManualCausalEI(EIBase):
         Efficient Global Optimization of Expensive Black-Box Functions
         Jones, Donald R. and Schonlau, Matthias and Welch, William J.
         Journal of Global Optimization
+        
+        Parameters:
+        -----------
+        v_target: float
+            The target value.
+        mean_function: Callable[[np.ndarray], tf.Tensor]
+            The mean function for the current DCBO exploration at given temporal index.
+        variance_function: Callable[[np.ndarray], tf.Tensor]
+            The mean function for the current DCBO exploration at given temporal index.
+        previous_variance: float
+            The previous variance.
+        task: str
+            Indicates whether the task is minimization ("min") or maximization ("max").
+        cmin: Optional[float]
+            The minimum value.
+        jitter: float
+            A small value to add to the variance to avoid numerical issues.
+        """        
 
-        :param mean_function: the mean function for the current DCBO exploration at given temporal index
-        :param variance_function: the mean function for the current DCBO exploration at given temporal index
-        :param jitter: parameter to encourage extra exploration.
-        """
         super().__init__(task, jitter)
         
         self.v_target = v_target
@@ -36,7 +49,7 @@ class ManualCausalEI(EIBase):
         self.previous_variance = previous_variance
         self.cmin = cmin
 
-    def evaluate(self, samples) -> np.ndarray:
+    def evaluate(self, samples: np.array) -> np.ndarray:
         """
         Computes the Expected Improvement.
 
@@ -46,7 +59,3 @@ class ManualCausalEI(EIBase):
         variance = self.variance_function(samples) + self.previous_variance         
         return super().evaluate(mean, variance)
     
-    @property
-    def has_gradients(self) -> bool:
-        """Returns that this acquisition does not have gradients."""
-        return False

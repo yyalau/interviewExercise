@@ -59,9 +59,6 @@ class Surrogate:
                 dtype=self.dtype,
             )
 
-            # original repo does not use initial_values
-            # if initial_values is None:
-            #     initial_values = hDict(variables=self.variables)
 
             for hist_t in range(t + 1):
                 sem_func = (
@@ -78,7 +75,6 @@ class Surrogate:
                     )
 
                     samples[var] = eager_replace(samples[var], haha, hist_t, axis=0, dtype=self.dtype)
-                    # samples[var][hist_t] = haha
 
             new_samples = hDict(
                 variables=self.variables,
@@ -90,7 +86,6 @@ class Surrogate:
             for var in self.variables:
                 new_samples[var] = samples[var][t]
 
-            # import ipdb; ipdb.set_trace()
             
             del new_ilvls
             return new_samples

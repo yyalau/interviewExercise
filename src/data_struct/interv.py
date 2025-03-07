@@ -2,17 +2,22 @@ from collections import defaultdict
 from .newdict import esDict
 import numpy as np
 from copy import deepcopy
+from . import Var
+from typing import List, Tuple, Union, Dict, Any, Callable
 
 class IntervLog:
     
-    
-    def __init__(self, exp_sets, nT = 1, nTrials = 1):
-        # along time
+    def __init__(self, exp_sets: Tuple[str, ...], nT: int = 1, nTrials: int = 1):
         '''
-        at each time t
-            for each trial
-                for each exploration set
-                    the intervention set and level
+        Initializes the IntervLog object with the given exp_sets, nT, and nTrials.
+        Parameters:
+        -----------
+        exp_sets : Tuple[str, ...]
+            The exploration sets.
+        nT : int
+            The number of time steps.
+        nTrials : int
+            The number of trials.
         '''
 
         self.n_keys = 4
@@ -28,18 +33,23 @@ class IntervLog:
         self.nTrials = nTrials
         
         self.set_idx = {es: idx for idx, es in enumerate(exp_sets)}
+
+    def get_value(self, x: np.array, key: int = 0, direction: Callable = max) -> Union[None, List[Any]]:
         '''
-        opt_data 1
-        
-        at each time t
-            (tuple) the optimal es set and intervention level
-            
-        opt_data 2
-        at each time t
-            for each trial
-                (tuple) the optimal es set and intervention level
+        Returns min / max of the value of the given key in the given array.
+        Parameters:
+        -----------
+        x : np.array
+            The array to search.
+        key : int
+            The key to search.
+        direction : Callable
+            The direction to search.
+        Returns:
+        --------
+        Union[None, List[Any]]
+            The min / max of the value of the given key in the given array.
         '''
-    def get_value(self, x, key = 0, direction = max):
         
         temp = [v for v in x if v[key] is not None]
         if len(temp) == 0:
@@ -48,45 +58,95 @@ class IntervLog:
     
 
     @property
-    def sol(self):
+    def sol(self) -> np.ndarray:
+        '''
+        Returns the solution of the optimization algorithm.
+        Returns:
+        --------
+        np.ndarray
+            The solution of the optimization algorithm.
+        '''
         r = np.array([[None]*self.n_keys]* self.nT)        
         for t in range(self.nT):
             r[t] = self.get_value(self.opt_y_trial[t], key = self.keys["y_values"], direction = min)
         return r
     
     @property
-    def opt_impv_trial(self):
-
+    def opt_impv_trial(self) -> np.ndarray:
+        '''
+        Returns the optimal improvement for each trial.
+        Returns:
+        --------
+        np.ndarray
+            The optimal improvement for each trial.
+        '''
         r = np.array([[[None]*self.n_keys]* self.nTrials]* self.nT )
         
         for t in range(self.nT):
             for trial in range(self.nTrials):
-                # r[t, trial] = self.get_opt_ptrial(t, trial)
                 r[t, trial] = self.get_value(self.data[t, trial], key = self.keys["impv"], direction = max)
         return r
 
     @property
-    def opt_y_trial(self):
+    def opt_y_trial(self) -> np.ndarray:
+        '''
+        Returns the optimal y values for each trial.
+        Returns:
+        --------
+        np.ndarray
+            The optimal y values for each trial.
+        '''
         r = np.array([[[None]*self.n_keys]* self.nTrials]* self.nT )
         
         for t in range(self.nT):
             for trial in range(self.nTrials):
-                # r[t, trial] = self.get_opt_ptrial(t, trial)
                 r[t, trial] = self.get_value(self.data[t, trial], key = self.keys["y_values"], direction = min)
 
         return r
 
     
-    def update_y(self, t, trial, es, y_values):
+    def update_y(self, t: int, trial: int, es: Tuple[Var, ...], y_values: float) -> None:
+        '''
+        Updates the y values for the given time step, trial, and exploration set.
+        Parameters:
+        -----------
+        t : int
+            The time step.
+        trial : int
+            The trial.
+        es : Tuple[Var, ...]
+            The exploration set.
+        y_values : float
+            The y values.
+        '''
         self.data[t, trial, self.set_idx[es]][self.keys["y_values"]] = y_values
                         
 
-    def update(self, t, trial, *, impv,  y_values, i_set, i_level):
+    def update(self, t: int, trial: int, *, impv: float, y_values: float, i_set: str, i_level: np.array) -> None:
+        '''
+        Updates the given time step, trial, improvement, y values, exploration set, and level.
+        Parameters:
+        -----------
+        t : int
+            The time step.
+        trial : int
+            The trial.
+        impv : float
+            The improvement from acquisition function.
+        y_values : float
+            The y values.
+        i_set : str
+            The exploration set.
+        i_level : np.array
+            The level.
+        '''
+        
         self.data[t,trial, self.set_idx[i_set]] = np.array([impv, i_set, i_level, y_values], dtype = object)
     
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.data.__repr__()
+
 if __name__ == "__main__":
     nT = 4; nTrials = 5
     il = IntervLog( exp_sets= ('X','Z', 'XZ'), nT = nT, nTrials = nTrials)
@@ -102,4 +162,3 @@ if __name__ == "__main__":
     # print(il.data[0])
     # print(il.opt_ptrial[0])
     # print(il.sol[0])    
-    

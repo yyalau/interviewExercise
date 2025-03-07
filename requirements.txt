@@ -1,0 +1,8 @@
+graphviz==0.20.3
+matplotlib==3.10.1
+networkx==3.2.1
+numpy==1.20.1
+pygraphviz==1.11
+pytest==8.3.5
+tensorflow==2.18.0
+tensorflow_probability==0.25.0
