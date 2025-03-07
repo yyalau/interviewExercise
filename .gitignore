@@ -5,5 +5,5 @@ test_kernel.py
 src/backup
 .pytest_cache
 .vscode
-results
+results/*
 backup

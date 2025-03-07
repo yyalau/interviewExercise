@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from data_ops.sampler.observation import DSamplerObsBase, DSamplerObsBF, DSamplerObsDCBO
 from sems import SEMBase
-from data_struct import Var
+from data_struct import Var, hDict
 from collections import OrderedDict
 
 class MockSEM(SEMBase):
