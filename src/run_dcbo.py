@@ -110,8 +110,8 @@ class DCBO:
 
         # Initialize intervention logger and datasets
         self.invLogger = IntervLog(exp_sets=exp_sets, nT=self.nT, nTrials=nTrials)
-        self.invDX = esDict(exp_sets=exp_sets, nT=self.nT, nTrials=n_samples, dtype=dtype)
-        self.D_Inv = DatasetInv(exp_sets=exp_sets, nT=self.nT, nTrials=nTrials, dtype=dtype)
+        self.invDX = esDict(exp_sets=exp_sets, nT=self.nT, nTrials=n_samples,)
+        self.D_Inv = DatasetInv(exp_sets=exp_sets, nT=self.nT, nTrials=nTrials)
         self.dtype = dtype
 
     def sanity_check(
@@ -359,8 +359,7 @@ class DCBO:
             variables=self.variables,
             nT=self.nT,
             nTrials=1,
-            default=lambda x, y, _: np.array([[np.nan] * y] * x, dtype=self.dtype),
-            dtype = self.dtype
+            default=lambda x, y, : np.array([[np.nan] * y] * x, dtype=self.dtype),
         )
 
         # Initialize trial intervention levels
@@ -450,8 +449,6 @@ class DCBO:
                     )
 
                     self.bo_models[trial_es][t, 0] = BOModel(
-                        es,
-                        self.target_variable,
                         mean_f,
                         variance_f,
                         dtype = self.dtype,

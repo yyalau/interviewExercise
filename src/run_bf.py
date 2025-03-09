@@ -156,8 +156,7 @@ class HypothesisTesting:
                 variables=self.variables,
                 nT=1,
                 nTrials=1,
-                default=lambda x, y, _: np.zeros((x, y)).astype(self.dtype),
-                dtype = dtype
+                default=lambda x, y: np.zeros((x, y)).astype(self.dtype),
             )
             temp[self.varX] = x_opt  # Set the intervention value for varX
             temp[self.varY] = np.zeros((1, 1))  # Initialize varY with zeros
@@ -240,8 +239,7 @@ if __name__ == "__main__":
                 variables=testcase['variables'],
                 nT=1,
                 nTrials=n_obs,
-                default=lambda x, y, dtype: np.random.randn(x, y).astype(dtype),
-                dtype = dtype
+                default=lambda x, y,: np.random.randn(x, y).astype(dtype),
             )
 
             # Define the models for the observed data under H0 and H1

@@ -67,7 +67,7 @@ class DSamplerObsBase(DataSamplerBase):
             variables=self.variables,
             nT=self.nT,
             nTrials=n_samples,
-            default=lambda x, y, _: np.zeros((x, y), dtype=self.dtype),
+            default=lambda x, y: np.zeros((x, y), dtype=self.dtype),
         )
 
         for t in range(self.nT):
@@ -187,7 +187,7 @@ class DSamplerObsDCBO(DSamplerObsBase):
     def __init__(self, sem: SEMBase, nT: int, variables: List[str], dtype: str = "float32"):
         super().__init__(sem, nT, variables, dtype)
         self.static_epsilon = hDict(
-            variables=variables, nT=nT, nTrials=1, default=lambda x, y, dtype: np.zeros((x, y), dtype = dtype)
+            variables=variables, nT=nT, nTrials=1, default=lambda x, y: np.zeros((x, y), dtype = dtype)
         )
 
     def select_value(

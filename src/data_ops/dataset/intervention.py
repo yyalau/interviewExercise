@@ -35,12 +35,11 @@ class DatasetInv(DatasetBase):
             variables=exp_sets,
             nT=nT,  
             nTrials=1,
-            default=lambda x, y, _: np.zeros((x, y), dtype="int"),
-            dtype="int",
+            default=lambda x, y: np.zeros((x, y), dtype="int"),
         )
 
-        self.dataX = esDict(exp_sets, nT=nT, nTrials=nTrials, dtype=dtype)
-        self.dataY = hDict(variables=exp_sets, nT=nT, nTrials=nTrials, dtype=dtype)
+        self.dataX = esDict(exp_sets, nT=nT, nTrials=nTrials)
+        self.dataY = hDict(variables=exp_sets, nT=nT, nTrials=nTrials)
     
 
     def update(self, es: Tuple, t: int, *, x: np.array, y: float):

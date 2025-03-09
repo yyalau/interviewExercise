@@ -55,8 +55,7 @@ class Surrogate:
                 variables=self.variables,
                 nT=self.nT,
                 nTrials=n_samples,
-                default=lambda x, y, _: tf.convert_to_tensor([[0.] * y] * x, dtype = self.dtype),
-                dtype=self.dtype,
+                default=lambda x, y: tf.convert_to_tensor([[0.] * y] * x, dtype = self.dtype),
             )
 
 
@@ -80,7 +79,7 @@ class Surrogate:
                 variables=self.variables,
                 nT=1,
                 nTrials=n_samples,
-                default=lambda x, y, _: None,
+                default=lambda x, y: None,
             )
 
             for var in self.variables:

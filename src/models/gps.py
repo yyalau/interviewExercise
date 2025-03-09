@@ -58,41 +58,16 @@ class GPRegression(NLLBase):
         super().__init__(model = model, feature_ndims=feature_ndims, dtype=dtype)
         
         
-    # def gprm(self):
-    #     return lambda inputs: tfd.GaussianProcessRegressionModel(
-    #         kernel=self.model.kernel,
-    #         index_points=inputs,
-    #         observation_index_points=self.X,
-    #         observations=self.Y,
-    #         observation_noise_variance=self.model.observation_noise_variance,
-    #     )
-        
-
-        # https://towardsdatascience.com/gaussian-process-models-7ebce1feb83d
-
-    # @tf.function
-    # def optimize(
-    #     self,
-    #     y,
-    # ):
-    #     with tf.GradientTape() as tape:
-    #         loss = -self.model.log_prob(y,)
-
-    #     grads = tape.gradient(loss, self.model.trainable_variables)
-    #     self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
-    #     return loss
-
     def fit(
         self,
         x,
         y,
-        ard=False,
         n_restart=10,
-        seed: int = 0,
         verbose=False,
     ):
-        self.X = x
-        self.Y = y
+        self.X = x = tf.cast(x, self.dtype) 
+        self.Y = y = tf.cast(y, self.dtype)
+        
         
         # We'll use an unconditioned GP to train the kernel parameters.        
 
@@ -114,15 +89,11 @@ class GPRegression(NLLBase):
             )
         )
 
-    # def gprm(self, inputs):
-    #     return 
 
     def predict(self, x):
         if self.feature_ndims == 1 and x.ndim == 1 or self.feature_ndims > 1 and x.ndim == 2:
             x = x[...,None]
-        # import ipdb; ipdb.set_trace()
         gp_fit = self.model.get_marginal_distribution(x)   
-        # return tf.reshape(gprm_fit.mean(), (x.shape[0], -1)), tf.reshape(gprm_fit.variance(), (x.shape[0], -1))
         return gp_fit.mean(), gp_fit.variance()
 
 
