@@ -5,7 +5,8 @@ class Var:
         name: str
         '''
         assert isinstance(name, str), f"Expected name to be of type str, got {type(name)}"
-        assert name != "", "Name cannot be empty."
+        assert len(name) !=0 , "Name cannot be empty."
+        assert "_" not in name, "Name cannot contain '_'."
         self.name = name
 
     def __str__(self) -> str:
@@ -29,6 +30,7 @@ class Node:
         t: int
         '''
         assert isinstance(name, (str, Var)), f"Expected name to be of type str or Var, got {type(name)}"
+
         if isinstance(t, str):
             t = int(t)
         assert isinstance(t, int), f"Expected t to be of type int, got {type(t)}"

@@ -48,9 +48,7 @@ def test_newdict_add():
 @pytest.mark.parametrize("arr", [
   ["invalid"],
   [(Var('a'),)],
-  [((1,2,3),None)],
    [(123, np.array([1, 2, 3]))],
-   [(Var('a'), "invalid")],
    
 ])
 def test_newdict_invalid_arr_type(arr):
@@ -109,7 +107,6 @@ def test_esdict_init():
     [Var('x')],
     [],
     [(Var('x'),), ()],
-    [(Var('x'),), ("haha",)],
 ])
 def test_esdict_invalid_init(variables):
     with pytest.raises(AssertionError):

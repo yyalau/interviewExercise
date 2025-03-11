@@ -1,4 +1,4 @@
-from ..base import PriorBase
+from .base import PriorBase
 from networkx.linalg.graphmatrix import adjacency_matrix
 import numpy as np
 from data_struct import hDict

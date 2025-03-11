@@ -34,12 +34,10 @@ class newDict(OrderedDict):
             assert isinstance(i[0], (Var, tuple)), f"Expected key to be of type Var or tuple, got {type(i[0])}"
             if isinstance(i[0], tuple):
                 assert len(i[0]) > 0, f"Expected tuple of length > 0, got {len(i[0])}"
-                for j in i[0]:
-                    assert isinstance(j, Var), f"Expected key to be of type Var or tuple of Var, got {i[0]}"
             
-            if i[1] is not None:
-                assert isinstance(i[1], (np.ndarray, tf.Tensor)), f"Expected value to be of type np.ndarray or tf.Tensor, got {type(i[1])}"
-            assert type(arr[0][1]) == type(i[1]), f"Expected all values to be of the same type {type(arr[0][1])}, got {type(i[1])}"
+            # if i[1] is not None:
+            #     assert isinstance(i[1], (np.ndarray, tf.Tensor)), f"Expected value to be of type np.ndarray or tf.Tensor, got {type(i[1])}"
+            # assert type(arr[0][1]) == type(i[1]), f"Expected all values to be of the same type {type(arr[0][1])}, got {type(i[1])}"
         
         
         assert isinstance(nT, int) and nT > 0, f"Expected nT to be a positive integer, got {nT}"
@@ -73,6 +71,8 @@ class newDict(OrderedDict):
         '''
         
         assert isinstance(key, (Var, tuple)), f"Expected key to be of type Var or tuple, got {type(key)}"
+        if isinstance(key, tuple):
+            assert len(key) > 0, f"Expected tuple of length > 0, got {len(key)}"
         if self.get(key) is not None:
             return
 

@@ -48,6 +48,7 @@ class CausalRBF:
             x1_diag = x1_diag[..., 0]
             x2_diag = x2_diag[..., 0]
 
+
         result = tf.sqrt(x1_diag) * tf.sqrt(x2_diag)
         return result
 
@@ -67,7 +68,7 @@ class CausalRBF:
 
         x1_diag = self.var_fn(x1)[..., None]
         x2_diag = self.var_fn(x2)[..., None]
-
+        
         if x1.shape[0] != 1 and x1_diag.shape[0] == 1:
             x1_diag = tf.repeat(x1_diag, x1.shape[0], axis=0)   
             x2_diag = tf.repeat(x2_diag, x2.shape[0], axis=0)
@@ -146,6 +147,13 @@ def create_kernel(BaseKernel):
             example_ndims: int
                 A python integer, the number of example dims in the inputs. In essence, this parameter controls how broadcasting of the kernel's batch shape with input batch shapes works. The kernel batch shape will be broadcast against everything to the left of the combined example and feature dimensions in the input shapes.
             '''
+            assert isinstance(x1, (tf.Tensor, np.ndarray)), "x1 must be a tf.Tensor"
+            assert type(x1) == type(x2), "x1 and x2 must have the same type. Got {} and {}".format(type(x1), type(x2))
+            assert x1.shape == x2.shape, "x1 and x2 must have the same shape"
+            assert isinstance(example_ndims, int), "example_ndims must be an integer"
+            assert example_ndims >= 0, "example_ndims must be a non-negative integer"
+            
+            
             dist = BaseKernel._apply(self, x1, x2, example_ndims)
             adjust = CausalRBF._apply(self, x1, x2, example_ndims)
             result = tf.cast(adjust, dist.dtype) + dist
@@ -160,7 +168,10 @@ def create_kernel(BaseKernel):
             x2: tf.Tensor or np.ndarray
                 Input tensor.
             '''
-            
+            assert isinstance(x1, (tf.Tensor, np.ndarray)), "x1 must be a tf.Tensor"
+            assert type(x1) == type(x2), "x1 and x2 must have the same type. Got {} and {}".format(type(x1), type(x2))
+            assert x1.shape == x2.shape, "x1 and x2 must have the same shape"
+
             if self.feature_ndims == 1:
                 dist = BaseKernel._matrix(self, x1, x2)
             else:

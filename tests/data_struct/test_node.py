@@ -20,7 +20,11 @@ def test_var_hash():
     var = Var("test")
     assert hash(var) == hash("test")
 
-
+@pytest.mark.parametrize("name", [123, "a_1", "_", ""])
+def test_var_invalid_name(name):
+    with pytest.raises(AssertionError):
+        Var(name)
+        
 def test_node_initialization():
     node = Node("test", 1)
     assert node.name == Var("test")
@@ -52,9 +56,10 @@ def test_node_hash():
     node = Node("test", 1)
     assert hash(node) == hash((Var("test"), 1))
 
-def test_node_invalid_name():
+@pytest.mark.parametrize("name", [123, "a_1", "_",""])
+def test_node_invalid_name(name):
     with pytest.raises(AssertionError):
-        Node(123, 1)
+        Node(name, 1)
 
 @pytest.mark.parametrize("t", ["1", 1.0, -1])
 def test_node_invalid_t(t):

@@ -1,4 +1,4 @@
-from ..base import PriorBase
+from .base import PriorBase
 import numpy as np
 from data_struct import hDict
 from models import GPRegression, KernelDensity
