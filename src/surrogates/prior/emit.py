@@ -9,7 +9,7 @@ import tensorflow as tf
 class PriorEmit(PriorBase):
     def __init__(self, G, dtype: str = "float32"):
         '''
-        The class for the prior emission functions. Inherits from PriorBase.         
+        The class for generating prior emission functions. Inherits from PriorBase.         
         '''
         super().__init__(G, dtype)
 
@@ -41,8 +41,8 @@ class PriorEmit(PriorBase):
         if pa_node.t == ch_node.t:
             funcs.add(key=(k := (pa_node.name, i, ch_node.name)))
             funcs[k][pa_node.t, 0] = GPRegression(
-                kernel=self.K_func, feature_ndims=1, dtype=self.dtype
-            ).fit(x=pa_value, y=ch_value)
+                kernel_fn=self.K_func, feature_ndims=1, dtype=self.dtype
+            ).fit(x=pa_value[...,None], y=ch_value)
 
         return funcs
 
@@ -104,11 +104,11 @@ class PriorEmit(PriorBase):
         funcs: hDict[Tuple[Var, Var], GPRegression]
             The updated dictionary of functions representing the graph structure. The keys for normal nodes are tuples of the form (parent_var, child_var). The values are GPRegression objects.
         """
-        assert pa_node.t == ch_node.t, "Time mismatch for emission nodes."
-        funcs.add(key=(k := (pa_node.name, )))
-        funcs[k][pa_node.t, 0] = GPRegression(kernel_fn=self.K_func, feature_ndims=1, dtype=self.dtype).fit(
-            x=pa_value[..., None], y=ch_value
-        )
+        if pa_node.t == ch_node.t:
+            funcs.add(key=(k := (pa_node.name, )))
+            funcs[k][pa_node.t, 0] = GPRegression(kernel_fn=self.K_func, feature_ndims=1, dtype=self.dtype).fit(
+                x=pa_value[..., None], y=ch_value
+            )
         return funcs
 
     def collider_ops(self, pa_nodes: Union[List[Node], np.ndarray], pa_values: Union[np.ndarray, tf.Tensor], ch_node: Node, ch_value: Union[np.ndarray, tf.Tensor], funcs: hDict[Tuple[Var, ...], GPRegression]) -> hDict[Tuple[Var, ...], GPRegression]:
@@ -133,11 +133,21 @@ class PriorEmit(PriorBase):
         funcs: hDict[Tuple[Var, ...], GPRegression]
             The updated dictionary of functions representing the graph structure. The keys for collider nodes are tuples of the form (parent_var1, parent_var2, ..., child_var). The values are GPRegression objects.
         """
-        if pa_nodes[0].t == ch_node.t:
-            funcs.add(key=(k := tuple(pa_node.name for pa_node in pa_nodes)))
-            funcs[k][pa_nodes[0].t, 0] = GPRegression(
-                kernel_fn=self.K_func, feature_ndims=len(pa_nodes), dtype=self.dtype
-            ).fit(x=pa_values[..., None], y=ch_value)
+        
+        # same time for all parents
+        assert all(pa_node.t == pa_nodes[0].t for pa_node in pa_nodes), "Time should be the same for all parent nodes."
+        assert pa_nodes[0].t == ch_node.t, "Time should be same for collider nodes." 
+        
+        funcs.add(
+            key=(
+                k := tuple(
+                    pa_node.name for pa_node in sorted(pa_nodes, key=lambda x: x.gstr)
+                )
+            )
+        )
+        funcs[k][pa_nodes[0].t, 0] = GPRegression(
+            kernel_fn=self.K_func, feature_ndims=2 if len(pa_nodes) != 1 else 1, dtype=self.dtype
+        ).fit(x=pa_values[..., None], y=ch_value)
 
         return funcs
 
@@ -169,18 +179,21 @@ class PriorEmit(PriorBase):
         )
 
         pa_nodes = self.nodes[np.where(A.sum(axis=0) == 0)[0]]
+        
         for pa_node in pa_nodes:
             pa_value = data[pa_node.name][pa_node.t, :]
             funcs.update(self.source_ops(pa_node, pa_value, funcs))
-
+            
         return A, funcs
 
-    def get_M(self) -> np.ndarray:
+    def get_M(self) -> Tuple[np.ndarray, np.ndarray]:
         """
         Returns adjacency matrix but only for the emission terms.
         
         Returns:
         --------
+        M: np.ndarray
+            The adjacency matrix for the graph structure.
         A: np.ndarray
             The adjacency matrix for the emission terms.
         """
@@ -189,6 +202,5 @@ class PriorEmit(PriorBase):
         for k in range(self.nT):
             A[
                 k * self.nVar : (k + 1) * self.nVar, k * self.nVar : (k + 1) * self.nVar
-            ] = M[0 : self.nVar, 0 : self.nVar]
-
-        return A
+            ] = M[k * self.nVar : (k + 1) * self.nVar, k * self.nVar : (k + 1) * self.nVar]
+        return M, A

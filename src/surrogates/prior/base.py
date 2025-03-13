@@ -64,11 +64,11 @@ class PriorBase:
                 data[var].shape[0] == self.nT
             ), f"Expected data to have shape ({self.nT}, ...), got {data[var].shape}"
 
-        A = self.get_M()
-        B = A.copy()
+        M, A = self.get_M()
+        M, source_func = self.source_node(M, data)
 
+        B = A.copy()
         A, fork_func = self.fork_node(A, data)
-        A, source_func = self.source_node(A, data)
         A, normal_func = self.normal_node(A, data)
 
         assert A.sum() == 0, "There are still edges in the adjacency matrix."
@@ -116,14 +116,13 @@ class PriorBase:
         pa_nodes = self.nodes[pa_idx]
 
         for pa_i, pa_node in zip(pa_idx, pa_nodes):
-            pa_value = data[pa_node.name][pa_node.t, :].reshape(-1, 1)
+            pa_value = data[pa_node.name][pa_node.t, :]
 
             ch_idx = np.where(A[pa_i, :] == 1)[0]  # idx of Y and Z
             ch_nodes = self.nodes[ch_idx]
 
             for i, (ch_i, ch_node) in enumerate(zip(ch_idx, ch_nodes)):
-
-                ch_value = data[ch_node.name][ch_node.t, :].reshape(-1, 1)
+                ch_value = data[ch_node.name][ch_node.t, :]
                 self.fork_sc(pa_node, pa_value, ch_node, ch_value, i, funcs)
                 funcs.update(
                     self.fork_ops(pa_node, pa_value, ch_node, ch_value, i, funcs)
@@ -181,8 +180,8 @@ class PriorBase:
             pa_value = data[pa_node.name][pa_node.t, :]
             ch_value = data[ch_node.name][ch_node.t, :]
 
-            funcs.update(self.normal_ops(pa_node, pa_value, ch_node, ch_value, funcs))
             self.normal_sc(pa_node, pa_value, ch_node, ch_value, funcs)
+            funcs.update(self.normal_ops(pa_node, pa_value, ch_node, ch_value, funcs))
             A[pa_idx, ch_idx] -= 1
 
         return A, funcs
@@ -222,10 +221,10 @@ class PriorBase:
             )
             ch_value = data[ch_node.name][ch_node.t, :]
 
+            self.collider_sc(pa_nodes, pa_value, ch_node, ch_value, funcs)
             funcs.update(
                 self.collider_ops(pa_nodes, pa_value, ch_node, ch_value, funcs)
             )
-            self.collider_sc(pa_nodes, pa_value, ch_node, ch_value, funcs)
             A[pa_idx, ch_i] -= 1
 
         return A, funcs
@@ -247,7 +246,7 @@ class PriorBase:
         assert isinstance(ch_node, Node), "The child node must be an instance of Node."
         assert isinstance(pa_value, (np.ndarray, tf.Tensor)), "The parent node value must be an array or tensor."
         assert isinstance(ch_value, (np.ndarray, tf.Tensor)), "The child node value must be an array or tensor."
-        assert pa_value.shape[1] == ch_value.shape[1] == 1, "The parent and child node values must be 1D arrays or tensors." 
+        assert pa_value.ndim == ch_value.ndim == 1, "The parent node value must be a 1D array or tensor."
 
         for key in funcs.keys():
             assert isinstance(key, tuple), "The keys must be tuples."

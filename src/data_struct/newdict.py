@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Union, Tuple, List, Any, Callable, Sequence, Dict
+from typing import Union, Tuple, List, Any, Callable, Collection, Dict
 from .node import Var
 import numpy as np
 import tensorflow as tf
@@ -93,7 +93,7 @@ class hDict(newDict):
     # graph > time > trials
     def __init__(
         self,
-        variables: List[Var],
+        variables: Collection[Var],
         nT: int = 1,
         nTrials: int = 1,
         default: Callable[[int, int], np.ndarray] = None,
@@ -124,7 +124,7 @@ class hDict(newDict):
         super().__init__(arr = [(es, self.default(nT, nTrials)) for es in variables] if arr is None else arr, nT = nT, nTrials = nTrials)
 
     def sc_hdict(self, variables):
-        assert isinstance(variables, (list, np.ndarray)), "variables must be a list or an array"
+        assert isinstance(variables, Collection), "variables must be a list or an array"
 
 class esDict(newDict):
 

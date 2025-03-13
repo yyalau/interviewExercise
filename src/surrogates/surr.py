@@ -1,7 +1,8 @@
-from typing import Union, Optional
+from typing import Union, Optional, Tuple, Callable, Optional
 import numpy as np
 from sems import SEMHat
 from data_struct import hDict, Node, Var
+
 # from data_ops import DSamplerInv
 from copy import deepcopy
 import tensorflow as tf
@@ -10,25 +11,39 @@ from utils.tools import eager_replace
 
 
 class Surrogate:
-    def __init__(self, semhat, dtype="float32"):
-        '''
+    def __init__(self, semhat: SEMHat, dtype: str = "float32"):
+        """
         Parameters:
         -----------
         semhat: SEMHat
             The SEMHat object.
         dtype: str
             The data type of the surrogate model.
-        '''
+        """
         assert isinstance(semhat, SEMHat), f"Expected SEMHat, got {type(semhat)}"
-        assert isinstance(dtype, str), f"Expected dtype to be of type str, got {type(dtype)}"
-        assert dtype in ["float32", "float64"], f"Expected dtype to be 'float32' or 'float64', got {dtype}"
-        
+        assert isinstance(
+            dtype, str
+        ), f"Expected dtype to be of type str, got {type(dtype)}"
+        assert dtype in [
+            "float32",
+            "float64",
+        ], f"Expected dtype to be 'float32' or 'float64', got {dtype}"
+
         self.sem = semhat
         self.nT = semhat.nT
         self.variables = semhat.vs
         self.dtype = dtype
 
-    def create(self, t, interv_levels, es, target_var):
+    def create(
+        self,
+        t: int,
+        interv_levels: hDict[Var, Union[np.ndarray, tf.Tensor]],
+        es: Tuple[Var, ...],
+        target_var: Var,
+    ) -> Tuple[
+        Callable[[Union[np.ndarray, tf.Tensor]], tf.Tensor],
+        Callable[[Union[np.ndarray, tf.Tensor]], tf.Tensor],
+    ]:
         """
         Create mean and variance functions for the surrogate model.
 
@@ -36,7 +51,7 @@ class Surrogate:
         ----------
         t : int
             Time step.
-        interv_levels : hDict[Var, Union[np.ndarray,tf.Tensor]]
+        interv_levels : hDict[Var, Union[np.ndarray, tf.Tensor]] or None
             Intervention levels.
         es : Tuple[Var, ...]
             Tuple of variables for intervention.
@@ -48,18 +63,39 @@ class Surrogate:
         tuple
             Mean and variance functions.
         """
-        
+
         assert isinstance(t, int), "Time step must be an integer."
         assert t >= 0 and t < self.nT, "Time step must be between 0 and nT-1."
         assert isinstance(es, tuple), "Intervention variables must be a tuple."
-        assert isinstance(interv_levels, hDict), "Intervention levels must be a numpy array or a tensor."
+
+        if interv_levels is not None:
+            assert isinstance(
+                interv_levels, hDict
+            ), "Intervention levels must be a numpy array or a tensor."
+        assert len(es) > 0, "Exploration set must be provided."
         for var in es:
             assert isinstance(var, Var), "Intervention variables must be Var objects."
-            assert isinstance(interv_levels[var], (np.ndarray, tf.Tensor)), "Intervention levels must have shape (nT, ...)."
-            assert interv_levels[var].shape[0] == self.nT, "Intervention levels must have shape (nT, ...)."
+            assert (
+                interv_levels.get(var) is not None
+            ), "Intervention levels must be provided for all intervention variables."
+            assert isinstance(
+                interv_levels[var], (np.ndarray, tf.Tensor)
+            ), "Intervention levels must be a numpy array or a tensor."
+            assert (
+                interv_levels[var].shape[0] == self.nT
+            ), "Intervention levels must have shape (nT, ...)."
         assert isinstance(target_var, Var), "Target variable must be a Var object."
-
-        def __sample(ilvl, interv_levels, moment=0):
+        assert target_var not in es, "Target variable cannot be in the exploration set."
+        assert target_var in self.variables, "Target variable must be in the variables."
+        
+        assert set(es).issubset(self.variables), "Exploration set must be a subset of the variables."
+        
+        
+        def __sample(
+            ilvl: Union[np.ndarray, tf.Tensor],
+            interv_levels: hDict[Var, Union[np.ndarray, tf.Tensor]],
+            moment: int = 0,
+        ) -> hDict:
             """
             Sample from the surrogate model.
 
@@ -67,7 +103,7 @@ class Surrogate:
             ----------
             ilvl : np.array or tf.Tensor
                 Intervention levels.
-            interv_levels : hDict[Var, Union[np.ndarray,tf.Tensor]]
+            interv_levels : hDict[Var, Union[np.ndarray, tf.Tensor]] or None
                 Intervention levels for each variable and time step.
             moment : int
                 Moment (0 for mean, 1 for variance).
@@ -77,10 +113,14 @@ class Surrogate:
             hDict
                 Sampled values.
             """
-            assert isinstance(ilvl, (np.ndarray, tf.Tensor)), "Intervention levels must be a numpy array."
-            assert ilvl.shape[1] == len(es), "Intervention levels must have shape (nTrials, nVars)."
+            assert isinstance(
+                ilvl, (np.ndarray, tf.Tensor)
+            ), "Intervention levels must be a numpy array."
+            assert ilvl.shape[1] == len(
+                es
+            ), "Intervention levels must have shape (nTrials, nVars)."
             assert moment in [0, 1], "Moment must be 0 for mean or 1 for variance."
-            
+
             new_ilvls = deepcopy(interv_levels)
             n_samples = ilvl.shape[0]
 
@@ -91,7 +131,8 @@ class Surrogate:
                     nT=self.nT,
                     nTrials=n_samples,
                     default=lambda nT, nTrials: tf.convert_to_tensor(
-                        [[np.nan] * nTrials] * nT, dtype=self.dtype,
+                        [[np.nan] * nTrials] * nT,
+                        dtype=self.dtype,
                     ),
                 )
             else:
@@ -102,14 +143,18 @@ class Surrogate:
             # Replace intervention levels with provided values
             if es is not None:
                 for vid, var in enumerate(es):
-                    new_ilvls[var] = eager_replace(new_ilvls[var], ilvl[:, vid], t, axis=0, dtype=self.dtype)
+                    new_ilvls[var] = eager_replace(
+                        new_ilvls[var], ilvl[:, vid], t, axis=0, dtype=self.dtype
+                    )
 
             # Initialize samples
             samples = hDict(
                 variables=self.variables,
                 nT=self.nT,
                 nTrials=n_samples,
-                default=lambda x, y: tf.convert_to_tensor([[0.] * y] * x, dtype=self.dtype),
+                default=lambda x, y: tf.convert_to_tensor(
+                    [[0.0] * y] * x, dtype=self.dtype
+                ),
             )
 
             # Generate samples for each time step
@@ -127,7 +172,9 @@ class Surrogate:
                         n_samples,
                     )
 
-                    samples[var] = eager_replace(samples[var], haha, hist_t, axis=0, dtype=self.dtype)
+                    samples[var] = eager_replace(
+                        samples[var], haha, hist_t, axis=0, dtype=self.dtype
+                    )
 
             # Extract new samples for the target time step
             new_samples = hDict(
@@ -147,7 +194,15 @@ class Surrogate:
         variance = lambda ilvls: __sample(ilvls, interv_levels, 1)[target_var]
         return mean, variance
 
-    def select_value(self, function, interv, var, t, samples: hDict, n_samples):
+    def select_value(
+        self,
+        function: Callable,
+        interv: Union[np.ndarray, tf.Tensor],
+        var: Var,
+        t: int,
+        samples: hDict,
+        n_samples: int,
+    ) -> tf.Tensor:
         """
         Get the value for the node, using SEMHat functions.
 
@@ -168,16 +223,23 @@ class Surrogate:
 
         Returns
         -------
-        Tensor
-            Selected value.
+        tf.Tensor
+            The resulting value of the node.
         """
-        assert isinstance(interv, (np.ndarray, tf.Tensor)), "Intervention levels must be a numpy array or a tensor."
+        assert callable(function), "Function must be a callable."
+        assert isinstance(
+            interv, (np.ndarray, tf.Tensor)
+        ), "Intervention levels must be a numpy array or a tensor."
         assert isinstance(var, Var), "Variable must be a Var object."
         assert isinstance(t, int), "Time step must be an integer."
         assert t >= 0 and t < self.nT, "Time step must be between 0 and nT-1."
         assert isinstance(samples, hDict), "Samples must be a hDict object."
         assert isinstance(n_samples, int), "Number of samples must be an integer."
+        assert interv.shape[0] == 1 or interv.shape[0] == n_samples, (
+            "Intervention levels must have shape (nTrials, ...) or (1, ...)."
+        )
         assert n_samples > 0, "Number of samples must be greater than 0."
+        assert interv.shape[0] == n_samples, "Intervention levels must have shape (nTrials, ...)."
         
         
         # If all intervention values are provided and not NaN, return them
@@ -190,7 +252,7 @@ class Surrogate:
 
         edge_key_t = self.sem.get_edgekeys(node, t)
         edge_key_t1 = self.sem.get_edgekeys(node, t - 1)
-        
+
         # Emission only
         if t == 0 and edge_key_t:
             return function(t, None, edge_key_t, samples, n_samples)
