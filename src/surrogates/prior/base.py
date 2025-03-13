@@ -1,8 +1,9 @@
-from data_struct import hDict, GraphObj
+from data_struct import hDict, GraphObj, Node, Var
 import numpy as np
 from networkx.linalg.graphmatrix import adjacency_matrix
 import tensorflow_probability as tfp
 from typing import Tuple
+import tensorflow as tf
 
 RBF = tfp.math.psd_kernels.ExponentiatedQuadratic
 
@@ -123,6 +124,7 @@ class PriorBase:
             for i, (ch_i, ch_node) in enumerate(zip(ch_idx, ch_nodes)):
 
                 ch_value = data[ch_node.name][ch_node.t, :].reshape(-1, 1)
+                self.fork_sc(pa_node, pa_value, ch_node, ch_value, i, funcs)
                 funcs.update(
                     self.fork_ops(pa_node, pa_value, ch_node, ch_value, i, funcs)
                 )
@@ -180,6 +182,7 @@ class PriorBase:
             ch_value = data[ch_node.name][ch_node.t, :]
 
             funcs.update(self.normal_ops(pa_node, pa_value, ch_node, ch_value, funcs))
+            self.normal_sc(pa_node, pa_value, ch_node, ch_value, funcs)
             A[pa_idx, ch_idx] -= 1
 
         return A, funcs
@@ -222,7 +225,8 @@ class PriorBase:
             funcs.update(
                 self.collider_ops(pa_nodes, pa_value, ch_node, ch_value, funcs)
             )
-            A[pa_idx, ch_idx] -= 1
+            self.collider_sc(pa_nodes, pa_value, ch_node, ch_value, funcs)
+            A[pa_idx, ch_i] -= 1
 
         return A, funcs
 
@@ -232,3 +236,56 @@ class PriorBase:
         '''
         gstr = [node.gstr for node in self.nodes]
         return adjacency_matrix(self.G.dag, nodelist=gstr).todense()
+
+    def fork_sc(self, pa_node, pa_value, ch_node, ch_value, i, funcs):
+        '''
+        Checks the inputs for the fork node operations.
+        '''
+        assert isinstance(i, int), "The connection index must be an integer."
+        assert i >= 0, "The connection index must be a non-negative integer."
+        assert isinstance(pa_node, Node), "The parent node must be an instance of Node."
+        assert isinstance(ch_node, Node), "The child node must be an instance of Node."
+        assert isinstance(pa_value, (np.ndarray, tf.Tensor)), "The parent node value must be an array or tensor."
+        assert isinstance(ch_value, (np.ndarray, tf.Tensor)), "The child node value must be an array or tensor."
+        assert pa_value.shape[1] == ch_value.shape[1] == 1, "The parent and child node values must be 1D arrays or tensors." 
+
+        for key in funcs.keys():
+            assert isinstance(key, tuple), "The keys must be tuples."
+            assert len(key) == 3, "The keys must have length 3."
+            assert isinstance(key[0], Var), "The first element of the key must be a Var."
+            assert isinstance(key[1], int), "The second element of the key must be an integer."
+            assert isinstance(key[2], Var), "The third element of the key must be a Var."
+
+    def normal_sc(self, pa_node, pa_value, ch_node, ch_value, funcs):
+        '''
+        Checks the inputs for the normal node operations.
+        '''
+        assert isinstance(pa_node, Node), "The parent node must be an instance of Node."
+        assert isinstance(ch_node, Node), "The child node must be an instance of Node."
+        assert isinstance(pa_value, (np.ndarray, tf.Tensor)), "The parent node value must be an array or tensor."
+        assert isinstance(ch_value, (np.ndarray, tf.Tensor)), "The child node value must be an array or tensor."
+        assert pa_value.ndim == 1, "The parent node value must be a 1D array or tensor."
+        assert ch_value.ndim == 1, "The child node value must be a 1D array or tensor."
+        
+        for key in funcs.keys():
+            assert isinstance(key, tuple), "The keys must be tuples."
+            assert len(key) == 1, "The keys must have length 1."
+            assert isinstance(key[0], Var), "The first element of the key must be a Var."
+    
+    def collider_sc(self, pa_nodes, pa_values, ch_node, ch_value, funcs):
+        '''
+        Checks the inputs for the collider node operations.
+        '''
+        assert isinstance(pa_nodes, (list, np.ndarray)), "The parent nodes must be a list or numpy array."
+        assert isinstance(pa_values, (np.ndarray, tf.Tensor)), "The parent node values must be an array or tensor."
+        assert isinstance(ch_node, Node), "The child node must be an instance of Node."
+        assert isinstance(ch_value, (np.ndarray, tf.Tensor)), "The child node value must be an array or tensor."
+        assert isinstance(funcs, hDict), "The functions must be an instance of hDict."
+        assert pa_values.shape[1] == len(pa_nodes), "The parent node values must have the same number of columns as the parent nodes."
+        assert ch_value.ndim == 1, "The child node value must be a 1D array."
+        
+        for key in funcs.keys():
+            assert isinstance(key, tuple), "The keys must be tuples."
+            assert len(key) >= 2, "The keys must have at least length 2."
+            for var in key:
+                assert isinstance(var, Var), "The elements of the key must be Var."

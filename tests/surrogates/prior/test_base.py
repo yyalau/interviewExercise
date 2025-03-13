@@ -62,26 +62,6 @@ def test_priorbase_get_M(prior_base):
     assert np.array_equal(result_matrix, expected_matrix)
 
 
-# def test_priorbase_fit(prior_base):
-    
-#     data = hDict(
-#         variables = prior_base.G.variables,
-#         nT = 3,
-#         nTrials = 1,
-#     )
-    
-#     prior_base.fork_ops = lambda pa_node, pa_value, ch_node, ch_value, i, funcs: {(pa_node.name, i, ch_node.name): "fork"}
-#     prior_base.source_ops = lambda pa_node, pa_value, funcs: {(None, pa_node.name): "source"}
-#     prior_base.normal_ops = lambda pa_node, pa_value, ch_node, ch_value, funcs: {(pa_node.name,): "normal"}
-#     prior_base.collider_ops = lambda pa_nodes, pa_values, ch_node, ch_value, funcs: {tuple(pa_node.name for pa_node in pa_nodes): "collider"}
-#     result = prior_base.fit(data)
-    
-#     assert isinstance(result, hDict)
-#     assert "variables" in result
-#     assert result.nT == 4
-#     assert result.nTrials == 1
-
-
 def test_priorbase_fork_node(prior_base):
     data = hDict(
         variables = prior_base.G.variables,

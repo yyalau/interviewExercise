@@ -76,7 +76,7 @@ def test_newdict_duplicate(n_dup):
 def test_hdict_init():
     variables = [Var('x'), Var('y')]
     hd = hDict(variables=variables, nT=2, nTrials=3)
-    assert hd.variables == variables
+    assert set(hd.keys()) == set(variables)
     assert hd.nT == 2
     assert hd.nTrials == 3
     assert hd[variables[0]].shape == (2, 3)

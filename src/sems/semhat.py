@@ -1,5 +1,4 @@
 from typing import Callable
-from surrogates import PriorEmit, PriorTrans
 from data_struct import GraphObj, hDict, Node
 import numpy as np
 from utils.tools import tnode2var, tvar2node
@@ -60,6 +59,7 @@ class SEMHat:
                 p, _, c = key
                 if p == pa_nodes[0] and c == ch_node:
                     return key
+            # import ipdb; ipdb.set_trace()
 
             raise ValueError(
                 f"Edge not found between {pa_nodes} and {ch_node} at time {t}"

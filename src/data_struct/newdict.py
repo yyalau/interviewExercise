@@ -24,7 +24,6 @@ class newDict(OrderedDict):
         self.nT = nT
         self.nTrials = nTrials
         self.arr = arr
-        # self.dtype = dtype
     
     def sc(self, arr, nT, nTrials):
         
@@ -50,8 +49,7 @@ class newDict(OrderedDict):
 
         # Don't copy self reference
         memo[id(self)] = result
-        
-        result = cls(**{k: copy.deepcopy(v, memo) for k, v in self.__dict__.items()})
+        result = cls([k for k in self.keys()], **{k: copy.deepcopy(v, memo) for k, v in self.__dict__.items()})
         
         # Return updated instance
         return result
@@ -95,7 +93,6 @@ class hDict(newDict):
     # graph > time > trials
     def __init__(
         self,
-        *,
         variables: List[Var],
         nT: int = 1,
         nTrials: int = 1,
@@ -117,7 +114,6 @@ class hDict(newDict):
             List of tuples containing the key and value.
         '''
         self.sc_hdict(variables)
-        self.variables = variables
 
         self.default = (
             default
@@ -144,7 +140,6 @@ class esDict(newDict):
             Number of trials.
         '''
         self.sc_esdict(exp_sets)
-        self.exp_sets = exp_sets
 
         self.default = lambda nT, nTrials, es_l,: np.array(
             [[[None] * es_l] * nTrials] * nT
