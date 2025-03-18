@@ -1,12 +1,12 @@
 import pytest
 import numpy as np
 import tensorflow as tf
-from unittest.mock import MagicMock
 from data_struct import hDict, Node, Var, GraphObj
-from surrogates import PriorTrans, PriorEmit
 from networkx import DiGraph
-from sems import SEMHat
+from surrogates.semhat import SEMHat
 from surrogates.surr import Surrogate
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
 @pytest.fixture
@@ -16,7 +16,6 @@ def semhat():
         [
             ("A_0", "B_1"),
             ("A_0", "C_1"),
-            ("B_0", "B_2"),
             ("A_1", "B_2"),
             ("C_0", "C_1"),
             ("C_1", "C_2"),
@@ -28,9 +27,9 @@ def semhat():
     )
 
     G = GraphObj(G, nT=3, target_var=Var(name="C"))
-    priorT = PriorTrans(G)
-    priorE = PriorEmit(G)
-    return SEMHat(G, priorE, priorT)
+    
+    dataY = hDict(variables=G.variables, nT=3, nTrials=1, default = lambda x,y: np.random.rand(x,y))
+    return SEMHat(G, dataY)
 
 
 @pytest.fixture
@@ -122,7 +121,7 @@ def mock_trans(t, _, emit_keys, sample, n_samples):
     [
         (Var(name="A"),0, mock_source),
         (Var(name="C"),2, mock_emit),
-        (Var(name="C"),0,mock_trans),
+        (Var(name="B"),1,mock_trans),
     ]
 )
 def test_select_value(surrogate, interv,var, t, function):

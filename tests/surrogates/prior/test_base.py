@@ -43,7 +43,7 @@ def test_priorbase_initialization(prior_base, graph_obj):
     assert prior_base.f.nTrials == 1
 
 
-def test_priorbase_get_M(prior_base):
+def test_priorbase_get_adj(prior_base):
     expected_matrix = np.array(
         [
             # A_0, B_0, C_0, B_1, C_1, A_1, C_2, A_2, B_2
@@ -58,7 +58,7 @@ def test_priorbase_get_M(prior_base):
             [0, 0, 0, 0, 0, 0, 0, 0, 0],  # B_2
         ]
     )
-    result_matrix = prior_base.get_M()
+    result_matrix = prior_base.get_adj()
     assert np.array_equal(result_matrix, expected_matrix)
 
 
@@ -74,7 +74,7 @@ def test_priorbase_fork_node(prior_base):
     
     prior_base.fork_ops = fork_ops
 
-    A = prior_base.get_M()
+    A = prior_base.get_adj()
     A, funcs = prior_base.fork_node(A, data)
 
     expected_matrix = np.array(
@@ -108,7 +108,7 @@ def test_priorbase_normal_node(prior_base):
 
     prior_base.normal_ops = normal_ops
 
-    A = prior_base.get_M()
+    A = prior_base.get_adj()
     A, funcs = prior_base.normal_node(A, data)
 
     expected_matrix = np.array(
@@ -142,7 +142,7 @@ def test_priorbase_collider_node(prior_base):
 
     prior_base.collider_ops = collider_ops
 
-    A = prior_base.get_M()
+    A = prior_base.get_adj()
     A, funcs = prior_base.collider_node(A, data)
     expected_matrix = np.array(
         [

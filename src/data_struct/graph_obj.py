@@ -7,23 +7,23 @@ import networkx as nx
 
 class GraphObj:
     def __init__(self, graph: DiGraph, nT: int, target_var: Var) -> None:
-        '''
-        Initializes the GraphObj object with the given graph, number of time steps, and target variable. 
-                    
+        """
+        Constructs a GraphObj instance using the provided graph, number of time steps, and target variable.
+
         Parameters:
         -----------
         graph : DiGraph
-            The directed acyclic graph.
-            Requirements for the 'graph':
-            - The graph must be a directed acyclic graph.
-            - The nodes must be named as <variable>_<time_step>.
-            - The set of variables must be the same for all time steps.
-            - The target variable must be in the graph.
+            A directed acyclic graph (DAG) that must satisfy the following conditions:
+            - The graph must be a valid DAG.
+            - Nodes must follow the naming convention <variable>_<time_step>.
+            - The set of variables must remain consistent across all time steps.
+            - The target variable must exist within the graph.
+            - The time step difference between connected nodes must not exceed 1. (Assumption 1)
         nT : int
-            The number of time steps.
+            The total number of time steps.
         target_var : Var
-            The target variable.
-        '''
+            The target variable within the graph.
+        """
         
         self.sc(graph, nT, target_var)
         
@@ -79,6 +79,15 @@ class GraphObj:
         assert (
             graph.number_of_nodes() // nT == len(set([n.split("_")[0] for n in graph.nodes]))
         ), "Number of unique variables must be equal to the number of variables."
+        
+        for edge in graph.edges():
+            snode, enode = edge
+            st, et = snode.split("_")[1], enode.split("_")[1]
+            assert int(st) <= int(et), "The start time step must be less than or equal to the end time step."
+            assert abs(int(et) - int(st)) <= 1, "The time step difference between connected nodes must not exceed 1."
+            
+            
+            
         
         # Check if the target variable is in the graph
         assert target_var in [node.split("_")[0] for node in graph.nodes], f"The target variable {target_var} is not in the graph"

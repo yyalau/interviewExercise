@@ -208,11 +208,11 @@ class PriorTrans(PriorBase):
         A: np.ndarray
             The adjacency matrix for the transition terms.
         """
-        M = super().get_M()
+        M = self.get_adj()
         A = M.copy()
         for t in range(self.nT):
             A[
                 t * self.nVar : (t + 1) * self.nVar, t * self.nVar : (t + 1) * self.nVar
             ] = 0
 
-        return M, A
+        return A

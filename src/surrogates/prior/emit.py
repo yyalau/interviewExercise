@@ -197,10 +197,10 @@ class PriorEmit(PriorBase):
         A: np.ndarray
             The adjacency matrix for the emission terms.
         """
-        M = super().get_M()
+        M = self.get_adj()
         A = np.zeros_like(M)
         for k in range(self.nT):
             A[
                 k * self.nVar : (k + 1) * self.nVar, k * self.nVar : (k + 1) * self.nVar
             ] = M[k * self.nVar : (k + 1) * self.nVar, k * self.nVar : (k + 1) * self.nVar]
-        return M, A
+        return A

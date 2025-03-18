@@ -64,8 +64,8 @@ class PriorBase:
                 data[var].shape[0] == self.nT
             ), f"Expected data to have shape ({self.nT}, ...), got {data[var].shape}"
 
-        M, A = self.get_M()
-        M, source_func = self.source_node(M, data)
+        A = self.get_M()
+        M, source_func = self.source_node(self.get_adj(), data)
 
         B = A.copy()
         A, fork_func = self.fork_node(A, data)
@@ -76,7 +76,7 @@ class PriorBase:
 
         for x in [fork_func, source_func, normal_func, collider_func]:
             self.f.update(x)
-        return self.f
+        return self
 
     def __empty_hDict(self) -> hDict:
         '''
@@ -229,7 +229,7 @@ class PriorBase:
 
         return A, funcs
 
-    def get_M(self) -> np.ndarray:
+    def get_adj(self) -> np.ndarray:
         '''
         Returns the adjacency matrix according to the graph structure.
         '''

@@ -1,9 +1,8 @@
 from typing import Union, Optional, Tuple, Callable, Optional
 import numpy as np
-from sems import SEMHat
+from .semhat import SEMHat
 from data_struct import hDict, Node, Var
 
-# from data_ops import DSamplerInv
 from copy import deepcopy
 import tensorflow as tf
 from tensorflow.python.framework.ops import SymbolicTensor
@@ -11,7 +10,7 @@ from utils.tools import eager_replace
 
 
 class Surrogate:
-    def __init__(self, semhat: SEMHat, dtype: str = "float32"):
+    def __init__(self, semhat: SEMHat):
         """
         Parameters:
         -----------
@@ -21,18 +20,11 @@ class Surrogate:
             The data type of the surrogate model.
         """
         assert isinstance(semhat, SEMHat), f"Expected SEMHat, got {type(semhat)}"
-        assert isinstance(
-            dtype, str
-        ), f"Expected dtype to be of type str, got {type(dtype)}"
-        assert dtype in [
-            "float32",
-            "float64",
-        ], f"Expected dtype to be 'float32' or 'float64', got {dtype}"
 
         self.sem = semhat
         self.nT = semhat.nT
         self.variables = semhat.vs
-        self.dtype = dtype
+        self.dtype = semhat.dtype
 
     def create(
         self,
@@ -252,7 +244,7 @@ class Surrogate:
 
         edge_key_t = self.sem.get_edgekeys(node, t)
         edge_key_t1 = self.sem.get_edgekeys(node, t - 1)
-
+        
         # Emission only
         if t == 0 and edge_key_t:
             return function(t, None, edge_key_t, samples, n_samples)

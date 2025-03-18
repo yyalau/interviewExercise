@@ -7,12 +7,11 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import numpy as np
 from utils.graphs import get_generic_graph
 from sems.toy_sems import StationaryDependentSEM, StationaryIndependentSEM
-from sems import SEMHat
 from utils.tools import powerset, eager_replace
 from utils.grids import get_interv_sampler, get_i_grids
 from data_struct import hDict, Var, GraphObj, Node, esDict, IntervLog
 from data_ops import DatasetObsDCBO, DSamplerObsDCBO, DatasetInv
-from surrogates import PriorEmit, PriorTrans, Surrogate, PriorBase
+from surrogates import Surrogate, SEMHat
 from bo import ManualCausalEI, CausalEI
 from bo import FixedCost
 from models import BOModel
@@ -298,33 +297,6 @@ class DCBO:
 
         return result
 
-    def get_surr(self, G: GraphObj, datasetO: DatasetObsDCBO, dtype: str) -> Surrogate:
-        """
-        Get surrogate model based on the graph and observational dataset.
-        
-        Parameters:
-        -----------
-        G : GraphObj
-            Directed Acyclic Graph (DAG) object representing the causal structure.
-        datasetO : DatasetObsDCBO
-            Observational dataset.
-        
-        Returns:
-        --------
-        Surrogate
-            Surrogate for generating mean and variance function for bayesian optimization.
-        """
-
-        def fitted_prior(prior: PriorBase, G: GraphObj, dataY: np.ndarray) -> Any:
-            p = prior(G, dtype=dtype)   
-            p.fit(dataY)
-            return p
-
-        prior_emit = fitted_prior(PriorEmit, G, datasetO.dataY)
-        prior_trans = fitted_prior(PriorTrans, G, datasetO.dataY)
-
-        return Surrogate(SEMHat(self.G, prior_emit, prior_trans, dtype=dtype), dtype=dtype)
-
     def sc_run(self,acq_cost, init_tvalue):
         if init_tvalue is not None:
             assert isinstance(init_tvalue, (int, float)), "init_tvalue must be an integer or float"
@@ -352,7 +324,7 @@ class DCBO:
         """
         
         self.sc_run(acq_cost, init_tvalue)
-        self.surr = self.get_surr(self.G, self.datasetO, self.dtype)
+        self.surr = Surrogate(SEMHat(self.G, self.datasetO.dataY, dtype=dtype))
 
         # Initialize optimal intervention levels
         opt_ilvl = hDict(

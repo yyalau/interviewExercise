@@ -41,12 +41,14 @@ def test_invalid_target_var(target_var):
 
 
 @pytest.mark.parametrize("edges", [
-        ("A_2", "A_0"),
+        ("A_2", "A_0"), # cyclic
         ("C_2", "A_0"),
         ("C_2", "A"),
         ("A", "A_0"),
         ("B_2", "B_3"),
         ("C_2", "D_2"),
+        ("A_0", "A_2"),
+        ("C_2", "A_1"),
 ])
 def test_invalid_graph(edges):
     graph = create_test_graph()

@@ -127,10 +127,6 @@ def test_get_gt(setup_dcbo):
     for i in range(dcbo.nT):
         assert len(gt[i]) == 3
 
-def test_get_surr(setup_dcbo):
-    dcbo = setup_dcbo
-    surr = dcbo.get_surr(dcbo.G, dcbo.datasetO, dcbo.dtype)
-    assert surr is not None
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 def test_run(dtype):

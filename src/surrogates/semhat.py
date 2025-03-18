@@ -3,18 +3,20 @@ from data_struct import GraphObj, hDict, Node
 import numpy as np
 from utils.tools import tnode2var, tvar2node
 import tensorflow as tf
+from .prior import PriorEmit, PriorTrans
 
 
 class SEMHat:
-    def __init__(self, G: GraphObj, gp_emit, gp_trans, dtype="float32"):
+    def __init__(self, G: GraphObj, datasetO, gp_emit = PriorEmit, gp_trans = PriorTrans, dtype="float32"):
         self.G = G
         self.nVar = G.nVar
         self.nT = G.nT
         self.nodes = G.nodes
         self.vs = G.variables
-
-        self.gp_emit = gp_emit
-        self.gp_trans = gp_trans
+        
+        
+        self.gp_emit = gp_emit(G, dtype=dtype).fit(datasetO)
+        self.gp_trans = gp_trans(G, dtype=dtype).fit(datasetO)
         self.dtype = dtype
 
     def filter_pa_t(self, node: str, t: int) -> tuple:
