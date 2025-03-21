@@ -11,12 +11,16 @@ def powerset(iterable):
 
 
 def tnode2var(tnode):
-    return tuple([node.name if node is not None else None for node in tnode])
+    return tuple([node.name if isinstance(node, Node)  else None for node in tnode])
 
 
-def tvar2node(tvar, t):
-    return tuple([Node(var.name, t) if var is not None else None for var in tvar])
-
+def tvar2node(var_keys, t1, t2):
+    result = []
+    
+    for i, element in enumerate(var_keys):
+        haha = Node(element, t1 if i ==0 else t2) if isinstance(element, Var) else element
+        result.append(haha)
+    return tuple(result)
 
 def get_probH0(x, y, m0, m1, dtype="float32"):
     y0 = m0.prob(y)

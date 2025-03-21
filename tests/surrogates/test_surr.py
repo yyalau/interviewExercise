@@ -121,7 +121,7 @@ def mock_trans(t, _, emit_keys, sample, n_samples):
     [
         (Var(name="A"),0, mock_source),
         (Var(name="C"),2, mock_emit),
-        (Var(name="B"),1,mock_trans),
+        (Var(name="B"),1, mock_trans),
     ]
 )
 def test_select_value(surrogate, interv,var, t, function):
