@@ -38,22 +38,25 @@ class SEMHat:
         self.gp_trans = PriorTrans(G, dtype=dtype).fit(dataY)
         self.dtype = dtype
 
-    def filter_pa_t(self, node: Union[str, Node], t: int) -> Tuple[Node, ...]:
+    def filter_pa_t(self, node: str, t: int) -> Tuple[Node, ...]:
         '''
         Returns the parents of a node at a given time-slice.
         
         Parameters:
         -----------
-        node: str or Node
-            The child node of interest
+        node: str
+            The child node of interest (in string format).
         t: int
             The index of interest        
         '''
         assert isinstance(t, int), "Time index must be an integer."
         assert t >= 0, "Time index must be greater than or equal to 0."
         assert t < self.nT, "Time index must be less than nT."
-        assert isinstance(node, (str, Node)), "Node must be a string or Node object."
-        
+        assert isinstance(node, str), "Node must be a str object."
+        assert len(sp:= node.split("_")) ==2, "Node must be in the format 'Var_t'."
+        assert sp[1].isdigit(), "Time index must be an integer."    
+        assert abs(t - int(sp[1])) <= 1, "Time index must be within 1 time-slice of the node."
+
         node_s = node.gstr if isinstance(node, Node) else node
         x = []
         for pa in self.G.dag.predecessors(node_s):
@@ -80,21 +83,27 @@ class SEMHat:
         """
         
         assert isinstance(t, int), "Time index must be an integer."
+        assert abs(t - node.t) <= 1, "Time index must be within 1 time-slice of the node."
+        
         if t < 0:
             return ()
                 
         assert t < self.nT, "Time index must be less than nT."
         assert isinstance(node, Node), "Node must be a Node object."
+        assert node in self.nodes, "Node must be in the graph."
 
         def __get_edgekeys(pa_nodes: Tuple, ch_node: Node, edge_keys: List, t: int) -> Tuple:
             if len(pa_nodes) == 0:
                 return pa_nodes
 
+            pa_nodes = tuple(sorted(pa_nodes, key=lambda x: x.gstr))
+                
             if pa_nodes in edge_keys:
                 return pa_nodes
 
-            if rkey := tuple(reversed(pa_nodes)) in edge_keys:
-                return rkey
+            # if rkey := tuple(reversed(pa_nodes)) in edge_keys:
+            #     return rkey
+            
 
             for key in edge_keys:
                 if len(key) != 3:
@@ -102,7 +111,7 @@ class SEMHat:
                 p, _, c = key
                 if p == pa_nodes[0] and c == ch_node:
                     return key
-                
+            print(pa_nodes, ch_node, edge_keys)
             raise ValueError(
                 f"Edge not found between {pa_nodes} and {ch_node} at time {t}"
             )

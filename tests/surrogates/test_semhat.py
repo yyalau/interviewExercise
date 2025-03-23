@@ -3,84 +3,137 @@ import numpy as np
 from typing import List, Dict, Any
 from unittest.mock import MagicMock
 from data_struct import GraphObj, hDict, Node, Var
-from surrogates  import PriorEmit, PriorTrans, SEMHat
+from surrogates import PriorEmit, PriorTrans, SEMHat
+from networkx import DiGraph
 
 # Fixtures for common test data
 
+
 @pytest.fixture
 def mock_graph_obj():
-    class MockDAG:
-        def __init__(self):
-            self.predecessors = {
-                "X_1": ["X_0"],
-                "Y_1": ["Y_0", "X_1"],
-                "X_0": [],
-                "Y_0": [],
-            }
-            self.in_degree = {
-                "X_0": 0,
-                "X_1": 1,
-                "Y_0": 0,
-                "Y_1": 2,
-            }
-    
-    class MockGraph(GraphObj):
-        def __init__(self):
-            self.nVar = 2
-            self.nT = 2
-            self.variables = ["X", "Y"]
-            self.nodes = [
-                Node("X", 0),
-                Node("X", 1),
-                Node("Y", 0),
-                Node("Y", 1),
-            ]
-            self.dag = MockDAG()
-    
-    return MockGraph()
+    G = DiGraph()
+    G.add_edges_from(
+        [
+            ("A_0", "B_1"),
+            ("A_0", "C_1"),
+            ("B_1", "B_2"),
+            ("A_1", "B_2"),
+            ("C_0", "C_1"),
+            ("C_1", "C_2"),
+            ("A_1", "A_2"),
+            ("C_1", "B_2"),
+            ("C_0", "B_0"),
+            ("A_2", "B_2"),
+        ]
+    )
+
+    G = GraphObj(G, nT=3, target_var=Var(name="C"))
+    return G
 
 @pytest.fixture
 def mock_hdict_data():
-    data = hDict(variables = [Var('X'), Var('Y')], default = lambda x,y : np.random.randn(x,y).astype("float32"))
+    data = hDict(
+        variables=[Var("A"), Var("B"), Var("C")],
+        nT = 3,
+        default=lambda x, y: np.random.randn(x, y).astype("float32"),
+    )
     return data
+
 
 @pytest.fixture
 def sem_hat(mock_graph_obj, mock_hdict_data):
     return SEMHat(mock_graph_obj, mock_hdict_data, dtype="float32")
 
+
 # Test cases
 
-# def test_init_valid(sem_hat, mock_graph_obj, mock_hdict_data):
-#     assert sem_hat.G == mock_graph_obj
-#     assert sem_hat.nVar == 2
-#     assert sem_hat.nT == 2
-#     assert sem_hat.dtype == "float32"
-#     assert isinstance(sem_hat.gp_emit, PriorEmit)
-#     assert isinstance(sem_hat.gp_trans, PriorTrans)
+def test_init_valid(sem_hat, ):
+    assert isinstance(sem_hat.G, GraphObj)
+    assert sem_hat.nVar == 3
+    assert sem_hat.nT == 3
+    assert sem_hat.dtype == "float32"
+    assert isinstance(sem_hat.gp_emit, PriorEmit)
+    assert isinstance(sem_hat.gp_trans, PriorTrans)
 
-# def test_init_invalid_graph_type(mock_hdict_data):
-#     with pytest.raises(AssertionError) as e:
-#         SEMHat("invalid_graph", mock_hdict_data)
-#     assert "Expected GraphObj" in str(e.value)
 
-# def test_init_data_keys_mismatch(mock_graph_obj):
-#     invalid_data = hDict()
-#     invalid_data["X"] = np.random.randn(2, 100)
-#     with pytest.raises(AssertionError) as e:
-#         SEMHat(mock_graph_obj, invalid_data)
-#     assert "Data keys must match" in str(e.value)
+@pytest.mark.parametrize(
+    "invalid_data",
+    [
+        hDict(
+            variables=[Var("A"), Var("B"), Var("C"), Var("D")],
+            nT=3,
+            default=lambda x, y: np.random.randn(x, y).astype("float32"),
+        ),
+        hDict(
+            variables=[Var("A"), Var("B")],
+            nT=3,
+            default=lambda x, y: np.random.randn(x, y).astype("float32"),
+        ),
+    ]
+)
+def test_init_data_keys_mismatch(mock_graph_obj, invalid_data):
+    with pytest.raises(AssertionError) as e:
+        SEMHat(mock_graph_obj, invalid_data)
+    assert "Data keys must match" in str(e.value)
 
-# def test_filter_pa_t_valid(sem_hat):
-#     parents = sem_hat.filter_pa_t(Node("X", 1), 0)
-#     assert len(parents) == 1
-#     assert parents[0].gstr == "X_0"
+def test_filter_pa_t_valid(sem_hat):
+    parents = sem_hat.filter_pa_t(Node("C", 2), 1)
+    assert set(parents) == {Node('C', 1), }    
 
-# def test_filter_pa_t_invalid_time(sem_hat):
-#     with pytest.raises(AssertionError):
-#         sem_hat.filter_pa_t("X_1", -1)
-#     with pytest.raises(AssertionError):
-#         sem_hat.filter_pa_t("X_1", 2)
+    parents = sem_hat.filter_pa_t(Node("B", 2), 1)
+    assert set(parents) == {Node('A', 1), Node('B', 1), Node('C', 1)}    
 
+    parents = sem_hat.filter_pa_t(Node("B", 2), 2)
+    assert set(parents) == {Node('A', 2), }
+
+
+@pytest.mark.parametrize(
+    "node, time",   
+    [
+        ("A_1", 0),
+        ("A_2", 1),
+        ("B_2",2),
+    ]
+)
+def test_filter_pa_t_invalid_time(sem_hat, node, time):
+    with pytest.raises(AssertionError):
+        sem_hat.filter_pa_t(node, time)
+
+
+def test_filter_pa_t_invalid_node(sem_hat):
+    with pytest.raises(AssertionError):
+        sem_hat.filter_pa_t(Node('D', 1), 2)
+        
+'''
+("A_0", "B_1"),
+("A_0", "C_1"),
+("B_1", "B_2"),
+("A_1", "B_2"),
+("C_0", "C_1"),
+("C_1", "C_2"),
+("A_1", "A_2"),
+("C_1", "B_2"),
+("C_0", "B_0"),
+("A_2", "B_2"),
+'''
+
+@pytest.mark.parametrize(
+    "node, time, expected",
+    [
+        (Node("A", 1), 0, ()),
+        (Node("A", 2), 1, (Node('A', 1), 0, Node('A', 2) )),
+        (Node("B", 2), 1, (Node('A', 1), 1,  Node('B', 2))),
+        (Node("B", 2), 2, (Node('A', 2), )),
+    ]
+)
+def test_get_edgekeys(sem_hat, node, time, expected):
+    
+    edge_keys = sem_hat.get_edgekeys(node, time)
+    print(edge_keys)
+    assert edge_keys == expected    
+    
+    
+    
 # def test_get_edgekeys_transition(mocker, sem_hat):
 #     mocker.patch.object(sem_hat.gp_trans.f["X"], "__getitem__", return_value=MagicMock())
 #     node = Node("X", 1)

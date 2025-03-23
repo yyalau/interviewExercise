@@ -14,7 +14,7 @@ def setup_prior_trans():
         [
             ("A_0", "B_1"),
             ("A_0", "C_1"),
-            ("B_0", "B_2"),
+            ("B_1", "B_2"),
             ("A_1", "B_2"),
             ("C_0", "C_1"),
             ("C_1", "C_2"),
@@ -113,15 +113,15 @@ def test_collider_ops(setup_prior_trans):
 
 def test_get_M(setup_prior_trans):
     prior_trans = setup_prior_trans
-    _, result = prior_trans.get_M()
+    result = prior_trans.get_M()
     
     # [A_0 B_0 C_0 A_1 B_1 C_1 A_2 B_2 C_2]
     expected = np.array(
         [[0., 0., 0., 0., 1., 1., 0., 0., 0.,],
          [0., 0., 0., 0., 0., 1., 0., 0., 0.,],
-         [0., 0., 0., 0., 0., 0., 0., 0., 1.,],
-         [0., 0., 0., 0., 0., 0., 1., 0., 1.,],
          [0., 0., 0., 0., 0., 0., 0., 0., 0.,],
+         [0., 0., 0., 0., 0., 0., 1., 0., 1.,],
+         [0., 0., 0., 0., 0., 0., 0., 0., 1.,],
          [0., 0., 0., 0., 0., 0., 0., 1., 1.,],
          [0., 0., 0., 0., 0., 0., 0., 0., 0.,],
          [0., 0., 0., 0., 0., 0., 0., 0., 0.,],
@@ -134,7 +134,7 @@ def test_get_M(setup_prior_trans):
 def test_fit(setup_prior_trans):
     prior_trans = setup_prior_trans
     data = hDict(variables=prior_trans.variables, nT=3, nTrials=1, default=lambda x, y: np.random.rand(x, y))
-    haha = prior_trans.fit(data)
+    haha = prior_trans.fit(data).f
     
     arr = [
         ((Var('A'), 0, Var('B')), [[GPRegression], [None], [None]]), # A_0 -> B_1
@@ -143,10 +143,10 @@ def test_fit(setup_prior_trans):
         ((Var('A'), 1, Var('B')), [[None], [GPRegression], [None]]), # A_1 -> B_2
         ((Var('C'), 1, Var('B')), [[None], [GPRegression], [None]]), # C_1 -> B_2
         ((Var('C'), 0, Var('C')), [[None], [GPRegression], [None]]), # C_1 -> C_2        
-        ((Var('B'),), [[GPRegression], [None], [None]]), # B_0 -> B_2
+        ((Var('B'),), [[None], [GPRegression], [None]]), # B_0 -> B_2
         ((Var('C'),), [[GPRegression], [None], [None]]), # C_0 -> C_2
         ((Var('A'), Var('C')), [[GPRegression], [None], [None]]), # A_0 -> C_1, B_0 -> C_1
-        ((Var('A'), Var('B'), Var('C')), [[None], [GPRegression], [None]]), # A_1 -> B_2, C_1 -> B_2, B_0 -> B_2
+        ((Var('A'), Var('B'), Var('C')), [[None], [GPRegression], [None]]), # A_1 -> B_2, C_1 -> B_2, B_1 -> B_2
     ]
     '''
     transition edges
@@ -160,7 +160,6 @@ def test_fit(setup_prior_trans):
         ("C_1", "B_2"), c2, collider1
 
     '''
-    print(haha)   
     for item in arr:
         key, value = item
         for t in range(3):
