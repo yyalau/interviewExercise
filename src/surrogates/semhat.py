@@ -97,7 +97,6 @@ class SEMHat:
                 return pa_nodes
 
             pa_nodes = tuple(sorted(pa_nodes, key=lambda x: x.gstr))
-                
             if pa_nodes in edge_keys:
                 return pa_nodes
 
@@ -111,7 +110,6 @@ class SEMHat:
                 p, _, c = key
                 if p == pa_nodes[0] and c == ch_node:
                     return key
-            print(pa_nodes, ch_node, edge_keys)
             raise ValueError(
                 f"Edge not found between {pa_nodes} and {ch_node} at time {t}"
             )
@@ -145,10 +143,15 @@ class SEMHat:
             The data dictionary that contains the data of the variables.
         '''
         assert isinstance(data, hDict), f"Expected hDict, got {type(data)}"
+        assert set(data.keys()) == set(self.variables), "Data keys must match the graph variables."
+        for key, val in data.items():
+            assert isinstance(val, np.ndarray), f"Expected np.ndarray, got {type(val)}"
+            assert val.shape[0] == self.nT, "Data shape must match the number of time-slices."
+
         self.gp_emit.fit(data)
         self.gp_trans.fit(data)
 
-    def select_sample(self, samples: hDict, edge_key: Sequence, t: int, n_samples: int) -> tf.Tensor:
+    def select_sample(self, samples: hDict, edge_key: Sequence, n_samples: int) -> tf.Tensor:
         """
         Function that selects the samples from the dictionary.
         
@@ -157,26 +160,20 @@ class SEMHat:
         samples : hDict
             The dictionary that contains the samples.
         edge_key : Sequence
-            The edge key of the node.
-        t : int
-            The time index.
+            The keys representing the edges.
         n_samples : int
             The number of samples. 
         """
         assert isinstance(samples, hDict), f"Expected hDict, got {type(samples)}"
         assert isinstance(edge_key, Sequence), f"Expected Sequence, got {type(edge_key)}"
-        assert isinstance(t, int), f"Expected int, got {type(t)}"
         assert isinstance(n_samples, int), f"Expected int, got {type(n_samples)}"
-        assert t >= 0, "Time index must be greater than or equal to 0."
-        assert t < self.nT, "Time index must be less than nT."
         assert n_samples > 0, "Number of samples must be greater than 0."
         
         l_key = len(edge_key)
 
         # if edge_key is a fork
-        if l_key == 3 and edge_key[1] == t:
+        if l_key == 3:
             pa_node, _, _ = edge_key
-            assert pa_node.t == t, "Time mismatch for prior/node and samples."
             return tf.cast(
                 tf.reshape(samples[pa_node.name][pa_node.t], (n_samples, -1)),
                 self.dtype,
@@ -185,7 +182,6 @@ class SEMHat:
         # otherwise
         samp = []
         for pa_node in edge_key:
-            assert pa_node.t == t, "Time mismatch for prior/nodes and samples."
             samp += [
                 tf.cast(
                     tf.reshape(samples[pa_node.name][pa_node.t], (n_samples, -1)),
@@ -223,7 +219,7 @@ class SEMHat:
         '''
         assert moment in [0, 1], "Moment must be either 0 or 1."
         def __get_gp_emit(t: int, _: Sequence, emit_keys: Sequence, sample: hDict, n_samples: int) -> tf.Tensor:
-            samples = self.select_sample(sample, emit_keys, t, n_samples)
+            samples = self.select_sample(sample, emit_keys, n_samples)
             return tf.reshape(self.gp_emit.f[tnode2var(emit_keys)][t, 0].predict(samples)[moment], (-1,))
 
         return __get_gp_emit
@@ -245,7 +241,7 @@ class SEMHat:
         
         assert moment in [0, 1], "Moment must be either 0 or 1."
         def __get_gp_trans(t: int, trans_keys: Sequence, _: Sequence, sample: hDict, n_samples: int) -> tf.Tensor:
-            samples = self.select_sample(sample, trans_keys, t - 1, n_samples)
+            samples = self.select_sample(sample, trans_keys, n_samples)
             return tf.reshape(self.gp_trans.f[tnode2var(trans_keys)][t - 1, 0].predict(samples)[
                 moment
             ], (-1,))

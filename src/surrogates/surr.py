@@ -218,6 +218,7 @@ class Surrogate:
         tf.Tensor
             The resulting value of the node.
         """
+        
         assert callable(function), "Function must be a callable."
         assert isinstance(
             interv, (np.ndarray, tf.Tensor)

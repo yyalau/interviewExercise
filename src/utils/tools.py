@@ -16,10 +16,13 @@ def tnode2var(tnode):
 
 def tvar2node(var_keys, t1, t2):
     result = []
-    
+    count = 0 
     for i, element in enumerate(var_keys):
-        haha = Node(element, t1 if i ==0 else t2) if isinstance(element, Var) else element
-        result.append(haha)
+        if not isinstance(element, Var):
+            result.append(element)
+            count +=1 
+            continue
+        result.append(Node(element, t1 if count ==0 else t2) )
     return tuple(result)
 
 def get_probH0(x, y, m0, m1, dtype="float32"):
