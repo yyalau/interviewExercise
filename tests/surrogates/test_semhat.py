@@ -5,7 +5,8 @@ from unittest.mock import MagicMock
 from data_struct import GraphObj, hDict, Node, Var
 from surrogates import PriorEmit, PriorTrans, SEMHat
 from networkx import DiGraph
-
+from utils.tools import tnode2var
+import tensorflow as tf
 # Fixtures for common test data
 
 
@@ -80,28 +81,25 @@ def test_init_data_keys_mismatch(mock_graph_obj, invalid_data):
         SEMHat(mock_graph_obj, invalid_data)
     assert "Data keys must match" in str(e.value)
 
-
-def test_filter_pa_t_valid(sem_hat):
-    parents = sem_hat.filter_pa_t(Node("C", 2), 1)
-    assert set(parents) == {
-        Node("C", 1),
-    }
-
-    parents = sem_hat.filter_pa_t(Node("B", 2), 1)
-    assert set(parents) == {Node("A", 1), Node("B", 1), Node("C", 1)}
-
-    parents = sem_hat.filter_pa_t(Node("B", 2), 2)
-    assert set(parents) == {
-        Node("A", 2),
-    }
+@pytest.mark.parametrize(
+    "node_s, t, result",
+    [
+        ("C_2", 1, {Node("C", 1)}),
+        ("B_2", 1, {Node("A", 1), Node("B", 1), Node("C", 1)}),
+        ("B_2", 2, {Node("A", 2)}),
+    ]   
+)
+def test_filter_pa_t_valid(sem_hat, node_s, t, result):
+    parents = sem_hat.filter_pa_t(node_s, t)
+    assert set(parents) == result
 
 
 @pytest.mark.parametrize(
     "node, time",
     [
-        ("A_1", 0),
-        ("A_2", 1),
-        ("B_2", 2),
+        ("A_1", 2),
+        ("A_2", 0),
+        ("B_3", 2),
     ],
 )
 def test_filter_pa_t_invalid_time(sem_hat, node, time):
@@ -126,8 +124,6 @@ def test_filter_pa_t_invalid_node(sem_hat):
 ("C_0", "B_0"),
 ("A_2", "B_2"),
 """
-
-
 @pytest.mark.parametrize(
     "node, time, expected",
     [
@@ -171,24 +167,68 @@ def test_select_sample(sem_hat, edge_key, n_samples):
     assert sample.shape == (n_samples, 1)
 
 
-# def test_get_gp_emit_mean(sem_hat):
-#     n_samples = 10
-#     gp_func = sem_hat.get_gp_emit(0)
-#     sample_data = hDict(
-#         variables=[Var("A"), Var("B"), Var("C")],
-#         nT=3,
-#         nTrials = n_samples,
-#         default=lambda x, y: np.random.randn(x, y).astype("float32"),
-#     )
-#     result = gp_func(0, [], (Node("A", 2),), sample_data, n_samples)
-#     assert result.shape == (n_samples,)
+@pytest.mark.parametrize(
+    "edge_key",
+    [
+        (None, Node("A", 0),),
+        (None, Node("A", 1),),
+    ]
+)
+def test_get_kernel(sem_hat, edge_key):
+    func = sem_hat.get_kernel()
+    result = func(edge_key, 10)
+    assert result.shape == (10,)
 
-# def test_get_gp_emit_mean(sem_hat, mocker):
-#     mock_predict = mocker.MagicMock(return_value=(np.zeros(10), np.ones(10)))
-#     mocker.patch.object(sem_hat.gp_emit.f["X"][0, 0], "predict", mock_predict)
-#     gp_func = sem_hat.get_gp_emit(0)
-#     result = gp_func(0, [], ["X"], {}, 10)
-#     assert result.shape == (10,)
+@pytest.mark.parametrize(
+    "emit_keys, trans_keys, edge_type",
+    [
+        (None, (Node("A", 0), 0, Node("B", 1)), "trans"),
+        (None, (Node("B", 1),), "trans"),
+        (None, (Node("A", 1),Node("B", 1),Node("C", 1),),"trans"),
+        ((Node("A", 2),), None, "emit"),
+        ((Node("C", 0), ), (Node("C", 0),), "both"),
+        ((Node("C", 0), ), None, "emit"),
+
+    ]
+)
+def test_get_gp_callable(sem_hat, emit_keys, trans_keys, edge_type):
+    n_samples = 10
+    moment = 0
+    gp_func = sem_hat.get_gp_callable(moment)
+    
+    sample_data = hDict(
+        variables=[Var("A"), Var("B"), Var("C")],
+        nT=3,
+        nTrials = n_samples,
+        default=lambda x, y: np.random.randn(x, y).astype("float32"),
+    )
+    
+    result = gp_func(trans_keys, emit_keys, sample_data, n_samples)
+    
+    if edge_type == "emit":
+    
+        expected = tf.reshape(
+            sem_hat.gp_emit.f[tnode2var(emit_keys)][emit_keys[0].t, 0].predict(
+            sem_hat.select_sample(sample_data, emit_keys, n_samples)
+        )[moment], (-1,),)
+    
+    elif edge_type == 'trans':
+        expected = tf.reshape(
+            sem_hat.gp_trans.f[tnode2var(trans_keys)][trans_keys[0].t, 0].predict(
+            sem_hat.select_sample(sample_data, trans_keys, n_samples)
+        )[moment], (-1,),)
+        
+    elif edge_type == 'both':
+        expected = tf.reshape(
+            sem_hat.gp_emit.f[tnode2var(emit_keys)][emit_keys[0].t, 0].predict(
+            sem_hat.select_sample(sample_data, emit_keys, n_samples)
+        )[moment], (-1,),) + tf.reshape(
+            sem_hat.gp_emit.f[tnode2var(trans_keys)][trans_keys[0].t, 0].predict(
+            sem_hat.select_sample(sample_data, trans_keys, n_samples)
+        )[moment], (-1,),) 
+        
+    assert np.array_equal(result, expected)
+
 
 # def test_static_function(sem_hat):
 #     static_func = sem_hat.static(0)

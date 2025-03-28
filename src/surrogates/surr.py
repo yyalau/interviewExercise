@@ -152,7 +152,7 @@ class Surrogate:
             # Generate samples for each time step
             for hist_t in range(t + 1):
                 sem_func = (
-                    self.sem.dynamic(moment) if hist_t > 0 else self.sem.static(moment)
+                    self.sem.dynamic(moment, hist_t) #if hist_t > 0 else self.sem.static(moment)
                 )
                 for var, function in sem_func.items():
                     haha = self.select_value(
@@ -246,13 +246,9 @@ class Surrogate:
         edge_key_t = self.sem.get_edgekeys(node, t)
         edge_key_t1 = self.sem.get_edgekeys(node, t - 1)
         
-        # Emission only
-        if t == 0 and edge_key_t:
-            return function(t, None, edge_key_t, samples, n_samples)
-
         # Source only
         if not edge_key_t1 and not edge_key_t:
-            return function(t, (None, var), n_samples)
+            return function((None, node), n_samples)
 
-        # Transition only
-        return function(t, edge_key_t1, edge_key_t, samples, n_samples)
+        # Emission or / and Transition 
+        return function(edge_key_t1, edge_key_t, samples, n_samples)

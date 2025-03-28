@@ -11,7 +11,7 @@ def powerset(iterable):
 
 
 def tnode2var(tnode):
-    return tuple([node.name if isinstance(node, Node)  else None for node in tnode])
+    return tuple([node.name if isinstance(node, Node)  else node for node in tnode])
 
 
 def tvar2node(var_keys, t1, t2):
