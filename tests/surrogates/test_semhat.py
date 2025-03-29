@@ -230,6 +230,48 @@ def test_get_gp_callable(sem_hat, emit_keys, trans_keys, edge_type):
     assert np.array_equal(result, expected)
 
 
+def test_dynamic(sem_hat):
+    moment = 0
+    expected = hDict(
+        variables = [Var("A"), Var("B"), Var("C")],
+        nT = 1,
+        nTrials = 1,
+    )
+
+    t = 0    
+    result = sem_hat.dynamic(moment, t)
+    
+    expected[Var("A")][0,0] = '__get_kernel'
+    expected[Var("B")][0,0] = '__get_gp_callable'
+    expected[Var("C")][0,0] = '__get_kernel'
+    
+    for var in sem_hat.vs:
+        result_name = getattr(result[var][0,0], '__name__')
+        assert result_name == expected[var][0,0]
+
+    t = 1
+    result = sem_hat.dynamic(moment, t)
+    
+    expected[Var("A")][0,0] = '__get_kernel'
+    expected[Var("B")][0,0] = '__get_gp_callable'
+    expected[Var("C")][0,0] = '__get_gp_callable'
+    
+    for var in sem_hat.vs:
+        result_name = getattr(result[var][0,0], '__name__')
+        assert result_name == expected[var][0,0]
+
+    t = 2    
+    result = sem_hat.dynamic(moment, t)
+    
+    expected[Var("A")][0,0] = '__get_gp_callable'
+    expected[Var("B")][0,0] = '__get_gp_callable'
+    expected[Var("C")][0,0] = '__get_gp_callable'
+    
+    for var in sem_hat.vs:
+        result_name = getattr(result[var][0,0], '__name__')
+        assert result_name == expected[var][0,0]
+    
+
 # def test_static_function(sem_hat):
 #     static_func = sem_hat.static(0)
 #     assert isinstance(static_func, hDict)

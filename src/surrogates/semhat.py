@@ -313,8 +313,9 @@ class SEMHat:
             The Gaussian Process function for both transition and emission edges, which takes in (the time-slice, the transition keys, the emission keys, the values for prediction, and the number of samples) as parameters and outputs the prediction from GP / KDEs.
         """
         assert moment in [0, 1], "Moment must be either 0 or 1."
-        
+
         def get_gp_values( fdict: hDict, moment: int, edge_key: Sequence, sample: hDict, n_samples: int) -> tf.Tensor:
+
             samples = self.select_sample(sample, edge_key, n_samples)
             return tf.reshape(
                 fdict[tnode2var(edge_key)][edge_key[0].t, 0].predict(samples)[moment],
@@ -322,12 +323,32 @@ class SEMHat:
             )
 
         def __get_gp_callable(
-            trans_keys: Sequence,
-            emit_keys: Sequence,
+            trans_keys: Tuple,
+            emit_keys: Tuple,
             sample: hDict,
             n_samples: int,
         ) -> tf.Tensor:
             
+            '''
+            Returns the Gaussian Process function for both transition and emission edges, which takes in (the time-slice, the transition keys, the emission keys, the values for prediction, and the number of samples) as parameters and outputs the prediction from GP / KDEs.
+            
+            Parameters:
+            ----------
+            trans_keys : Sequence
+                The transition keys representing the edges.
+            emit_keys : Sequence
+                The emission keys representing the edges.
+            sample : hDict
+                The dictionary that contains the input samples for all nodes.
+            n_samples : int
+                The number of samples.
+
+            Returns:
+            -------
+            tf.Tensor
+                The prediction from the GP / KDEs.
+            '''
+            assert isinstance(trans_keys, Tuple), ""
             assert trans_keys or emit_keys, "Either transition or emission keys must be provided."
             
             trans = get_gp_values(self.gp_trans.f, moment, trans_keys, sample, n_samples) if trans_keys else None
@@ -398,8 +419,6 @@ class SEMHat:
         )
 
         for var in self.vs:
-            # if node.t != 1:
-            #     continue
 
             # Single source node
             if self.G.dag.in_degree[f"{var}_{t}"] == 0:
