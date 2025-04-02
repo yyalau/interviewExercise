@@ -271,15 +271,3 @@ def test_dynamic(sem_hat):
         result_name = getattr(result[var][0,0], '__name__')
         assert result_name == expected[var][0,0]
     
-
-# def test_static_function(sem_hat):
-#     static_func = sem_hat.static(0)
-#     assert isinstance(static_func, hDict)
-#     assert "X" in static_func
-#     assert static_func["X"][0, 0] is not None
-
-# def test_dynamic_function(sem_hat):
-#     dynamic_func = sem_hat.dynamic(0)
-#     assert isinstance(dynamic_func, hDict)
-#     assert "X" in dynamic_func
-#     assert dynamic_func["X"][0, 0] is not None

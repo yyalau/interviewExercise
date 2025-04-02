@@ -251,4 +251,4 @@ class Surrogate:
             return function((None, node), n_samples)
 
         # Emission or / and Transition 
-        return function(edge_key_t1, edge_key_t, samples, n_samples)
+        return function(edge_key_t1, edge_key_t, samples)

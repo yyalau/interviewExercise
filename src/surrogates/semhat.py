@@ -25,7 +25,7 @@ class SEMHat:
         assert set(dataY.keys()) == set(
             G.variables
         ), "Data keys must match the graph variables."
-        for key, val in dataY.items():
+        for val in dataY.values():
             assert isinstance(val, np.ndarray), f"Expected np.ndarray, got {type(val)}"
             assert (
                 val.shape[0] == G.nT
@@ -108,15 +108,13 @@ class SEMHat:
         def __get_edgekeys(
             pa_nodes: Tuple, ch_node: Node, edge_keys: List, t: int
         ) -> Tuple:
+            
             if len(pa_nodes) == 0:
                 return pa_nodes
 
             pa_nodes = tuple(sorted(pa_nodes, key=lambda x: x.gstr))
             if pa_nodes in edge_keys:
                 return pa_nodes
-
-            # if rkey := tuple(reversed(pa_nodes)) in edge_keys:
-            #     return rkey
 
             for key in edge_keys:
                 if len(key) != 3:
@@ -169,7 +167,7 @@ class SEMHat:
         self.gp_trans.fit(data)
 
     def select_sample(
-        self, samples: hDict, edge_key: Sequence, n_samples: int
+        self, samples: hDict, edge_key: Sequence
     ) -> tf.Tensor:
         """
         Function that selects the samples from the dictionary.
@@ -180,20 +178,29 @@ class SEMHat:
             The dictionary that contains the samples.
         edge_key : Sequence
             The keys representing the edges.
-        n_samples : int
-            The number of samples.
         """
         assert isinstance(samples, hDict), f"Expected hDict, got {type(samples)}"
         assert isinstance(
             edge_key, Sequence
         ), f"Expected Sequence, got {type(edge_key)}"
-        assert isinstance(n_samples, int), f"Expected int, got {type(n_samples)}"
-        assert n_samples > 0, "Number of samples must be greater than 0."
+        
+        assert set(samples.keys()) == set(
+            self.vs
+        ), "Sample keys must match the graph variables."
+
+        for idx, val in enumerate(samples.values()):
+            assert (
+                val.shape[0] == self.nT
+            ), "Sample shape must match the number of time-slices."
+            
+            if idx ==0: n_samples = val.shape[1]
+            assert val.shape[1] == n_samples, "The number of samples must be the same for all variables."
+
 
         l_key = len(edge_key)
-        # print(edge_key)
+
         # if edge_key is a fork
-        if l_key == 3:
+        if l_key == 3 and isinstance(edge_key[1], int):
             pa_node, _, _ = edge_key
             return tf.cast(
                 tf.reshape(samples[pa_node.name][pa_node.t], (n_samples, -1)),
@@ -314,9 +321,9 @@ class SEMHat:
         """
         assert moment in [0, 1], "Moment must be either 0 or 1."
 
-        def get_gp_values( fdict: hDict, moment: int, edge_key: Sequence, sample: hDict, n_samples: int) -> tf.Tensor:
+        def get_gp_values( fdict: hDict, moment: int, edge_key: Sequence, sample: hDict) -> tf.Tensor:
 
-            samples = self.select_sample(sample, edge_key, n_samples)
+            samples = self.select_sample(sample, edge_key)
             return tf.reshape(
                 fdict[tnode2var(edge_key)][edge_key[0].t, 0].predict(samples)[moment],
                 (-1,),
@@ -326,7 +333,6 @@ class SEMHat:
             trans_keys: Tuple,
             emit_keys: Tuple,
             sample: hDict,
-            n_samples: int,
         ) -> tf.Tensor:
             
             '''
@@ -340,19 +346,33 @@ class SEMHat:
                 The emission keys representing the edges.
             sample : hDict
                 The dictionary that contains the input samples for all nodes.
-            n_samples : int
-                The number of samples.
 
             Returns:
             -------
             tf.Tensor
                 The prediction from the GP / KDEs.
             '''
-            assert isinstance(trans_keys, Tuple), ""
-            assert trans_keys or emit_keys, "Either transition or emission keys must be provided."
             
-            trans = get_gp_values(self.gp_trans.f, moment, trans_keys, sample, n_samples) if trans_keys else None
-            emit = get_gp_values(self.gp_emit.f, moment, emit_keys, sample, n_samples) if emit_keys else None
+            if trans_keys is not None:
+                assert isinstance(trans_keys, Tuple), "Transition keys must be a tuple."
+            if emit_keys is not None:
+                assert isinstance(emit_keys, Tuple), "Emission keys must be a tuple."
+            assert trans_keys or emit_keys, "Either transition or emission keys must be provided."
+            assert isinstance(sample, hDict), f"Expected hDict, got {type(sample)}"
+            assert set(sample.keys()) == set(
+                self.vs
+            ), "Sample keys must match the graph variables."
+            
+            for idx, val in enumerate(sample.values()):
+                assert (
+                    val.shape[0] == self.nT
+                ), "Sample shape must match the number of time-slices."
+                if idx ==0: n_samples = val.shape[1]
+                assert val.shape[1] == n_samples, "The number of samples must be the same for all variables."
+
+            
+            trans = get_gp_values(self.gp_trans.f, moment, trans_keys, sample) if trans_keys else None
+            emit = get_gp_values(self.gp_emit.f, moment, emit_keys, sample) if emit_keys else None
 
             if emit is None: return trans
             if trans is None: return emit

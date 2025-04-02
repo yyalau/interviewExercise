@@ -88,7 +88,10 @@ def create_kernel(BaseKernel):
             feature_ndims: int = 1,
         ):
             '''
-            Parameters:
+            Intialize the kernel.
+            
+            Parameters
+            ----------
             var_fn: Callable[[float], float]
                 A function to calculate the variance of the kernel.
             amplitude: float
@@ -139,13 +142,20 @@ def create_kernel(BaseKernel):
         def _apply(self, x1: Union[tf.Tensor, np.ndarray], x2: Union[tf.Tensor, np.ndarray], example_ndims: int = 0) -> tf.Tensor:
             '''
             Apply the kernel function pairs of inputs.
-            Parameters:
+            
+            Parameters
+            -----------
             x1: tf.Tensor or np.ndarray
                 Input tensor.
             x2: tf.Tensor or np.ndarray
                 Input tensor.
             example_ndims: int
                 A python integer, the number of example dims in the inputs. In essence, this parameter controls how broadcasting of the kernel's batch shape with input batch shapes works. The kernel batch shape will be broadcast against everything to the left of the combined example and feature dimensions in the input shapes.
+            
+            Returns
+            -------
+            tf.Tensor
+                The kernel distance of the input pairs.
             '''
             assert isinstance(x1, (tf.Tensor, np.ndarray)), "x1 must be a tf.Tensor"
             assert type(x1) == type(x2), "x1 and x2 must have the same type. Got {} and {}".format(type(x1), type(x2))
@@ -162,11 +172,17 @@ def create_kernel(BaseKernel):
         def _matrix(self, x1: Union[tf.Tensor, np.ndarray], x2: Union[tf.Tensor, np.ndarray]) -> tf.Tensor:
             '''
             Construct the distance matrix between two tensors.
-            Parameters:
+            Parameters
+            -----------
             x1: tf.Tensor or np.ndarray
                 Input tensor.
             x2: tf.Tensor or np.ndarray
                 Input tensor.
+                
+            Returns
+            -------
+            tf.Tensor
+                The kernel distance matrix.
             '''
             assert isinstance(x1, (tf.Tensor, np.ndarray)), "x1 must be a tf.Tensor"
             assert type(x1) == type(x2), "x1 and x2 must have the same type. Got {} and {}".format(type(x1), type(x2))
