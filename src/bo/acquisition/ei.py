@@ -53,7 +53,7 @@ class CausalEI(EIBase):
             The expected improvement values at the given points.    
         '''
         mean, variance = self.bo_model.predict(x)        
-        self.cmin = tf.reduce_min(self.bo_model.Y)
+        self.cmin = self.bo_model.minY
         
         return super().evaluate(mean, variance)
 

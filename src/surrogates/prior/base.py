@@ -70,7 +70,6 @@ class PriorBase:
         B = A.copy()
         A, fork_func = self.fork_node(A, data)
         A, normal_func = self.normal_node(A, data)
-
         assert A.sum() == 0, "There are still edges in the adjacency matrix."
         _, collider_func = self.collider_node(B, data)
 

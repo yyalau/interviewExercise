@@ -101,6 +101,19 @@ class NLLBase:
 
             nll = self.optimize(x, y)
             if i % 5 == 0 and verbose:
-                print("Step {}: NLL = {}".format(i, nll))
+                self.logging(i, nll)
 
-        return nll
+        return self
+
+    def logging(self, step: int, nll: tf.Tensor) -> None:
+        '''
+        Parameters:
+        step: int
+            The current step of the optimization
+        nll: tf.Tensor
+            The negative log likelihood value
+        '''
+        
+        assert isinstance(nll, tf.Tensor), "nll must be a tf.Tensor"
+        
+        print("Step {}: NLL = {}".format(step, nll))
